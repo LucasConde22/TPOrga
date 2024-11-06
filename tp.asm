@@ -7,6 +7,9 @@ section .data
     msgPersonalizar db "¿Desea personalizar la partida? (S/N): ", 0
     msgErrorIngreso db "Ingreso inválido, intente nuevamente.", 0
     msgEstadoTablero db "Estado actual del tablero:", 0
+    msgPedirMovimiento db "Ingrese el movimiento a realizar: ", 0
+    msgFicha db "   Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
+    msgDestino db "   Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
 
     columnas db " | 1234567", 0x0A
     f1 db "1|   XXX  ", 0x0A
@@ -28,10 +31,24 @@ section .data
 section .bss
     buffer resw 1
 
+%macro mImprimirPrintf 1
+    mov rdi, %1
+    sub rsp, 8
+    call printf
+    add rsp, 8
+%endmacro
+
 %macro mImprimirPuts 1
     mov rdi, %1
     sub rsp, 8
     call puts
+    add rsp, 8
+%endmacro
+
+%macro mLeer 0
+    mov rdi, buffer
+    sub rsp, 8
+    call gets
     add rsp, 8
 %endmacro
 
@@ -56,6 +73,13 @@ personalizar:
 cicloJuego:
     ; Mostrar tablero
     call mostrarTablero
+
+    ; Pedir movimiento
+    mImprimirPuts msgPedirMovimiento
+    mImprimirPrintf msgFicha
+    mLeer
+    mImprimirPrintf msgDestino
+    mLeer
 
     ret
 
