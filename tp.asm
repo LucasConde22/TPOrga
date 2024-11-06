@@ -1,5 +1,5 @@
 global main
-extern printf, puts, gets
+extern printf, puts, gets, sscanf
 
 section .data
     cSoldados db "X", 0
@@ -10,6 +10,7 @@ section .data
     msgPedirMovimiento db "Ingrese el movimiento a realizar: ", 0
     msgFicha db "   Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
     msgDestino db "   Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
+    formato db "%hhi", 0
 
     columnas db " | 1234567", 0x0A
     f1 db "1|   XXX  ", 0x0A
@@ -29,7 +30,10 @@ section .data
     ;                   73 74 75
 
 section .bss
-    buffer resw 1
+    fila resb 1
+    columna resb 1
+
+    buffer resq 1
 
 %macro mImprimirPrintf 1
     mov rdi, %1
@@ -62,10 +66,7 @@ personalizar:
     add rsp, 8
 
     ; Leer respuesta
-    mov rdi, buffer
-    sub rsp, 8
-    call gets
-    add rsp, 8
+    mLeer
 
     ; Validar respuesta
     call validarEntradaPersonalizacion ; Desarrolar al final!
@@ -78,8 +79,10 @@ cicloJuego:
     mImprimirPuts msgPedirMovimiento
     mImprimirPrintf msgFicha
     mLeer
+    call validarEntradaCelda
     mImprimirPrintf msgDestino
     mLeer
+    call validarEntradaCelda
 
     ret
 
@@ -87,6 +90,61 @@ mostrarTablero:
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnas
     ret
+
+validarEntradaCelda:
+    ; Valida que la celda ingresada sea válida (que pertenezca al tablero):
+    mov al, [buffer] ; Columna
+    mov ah, [buffer + 1] ; Fila
+
+    mov dh, 51 ; Col 3
+    mov dl, 53 ; Col 5
+    cmp ah, 49 ; Fila 1
+    je validarEntradaCeldaCol
+    jl errorIngreso ; Fila < 1, error | DEBERÍAMOS LLAMAR A OTRO LUGAR Y QUE SE BIFURQUE PARA EJECUTAR DEVUELTA EL PEDIDO
+    cmp ah, 50 ; Fila 2
+    je validarEntradaCeldaCol
+    cmp ah, 54 ; Fila 6
+    je validarEntradaCeldaCol
+    cmp ah, 55 ; Fila 7
+    je validarEntradaCeldaCol
+    jg errorIngreso ; Fila > 7, error
+
+    mov dh, 49 ; Col 1
+    mov dl, 55 ; Col 7
+    cmp ah, 51 ; Fila 3
+    je validarEntradaCeldaCol
+    cmp ah, 52 ; Fila 4
+    je validarEntradaCeldaCol
+
+validarEntradaCeldaCol:
+    cmp al, dh
+    jl errorIngreso
+    cmp al, dl
+    jg errorIngreso
+
+    ; Podría hacer las conversiones antes, el manejo de errores creo que sería un poco mayor
+    mov [buffer], ah
+    mov byte [buffer + 1], 0
+    mov [columna], al ; Aprovecho para guardar el caracter de la col, porque el llamado rompe rax
+    mov rdi, buffer
+    mov rsi, formato
+    mov rdx, fila
+    sub rsp, 16 ; Por qué 16? No sé
+    call sscanf
+    add rsp, 16
+
+    mov rax, [columna]
+    mov [buffer], al
+    mov byte [buffer + 1], 0
+    mov rdi, buffer
+    mov rsi, formato
+    mov rdx, columna
+    sub rsp, 16
+    call sscanf
+    add rsp, 16
+    
+    ret
+
 
 ; Código que escribí pelotudeando, seguramente haya que cambiarlo:
 validarEntradaPersonalizacion:
