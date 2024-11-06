@@ -8,13 +8,13 @@ section .data
     msgErrorIngreso db "Ingreso inválido, intente nuevamente.", 0
     msgEstadoTablero db "Estado actual del tablero:", 0
 
-    columnas db " | 1234567", 0
-    f1 db "1|   XXX  ", 0
-    f2 db "2|   XXX  ", 0
-    f3 db "3| XXXXXXX", 0
-    f4 db "4| XXXXXXX", 0
-    f5 db "5| XX   XX", 0
-    f6 db "6|     O  ", 0
+    columnas db " | 1234567", 0x0A
+    f1 db "1|   XXX  ", 0x0A
+    f2 db "2|   XXX  ", 0x0A
+    f3 db "3| XXXXXXX", 0x0A
+    f4 db "4| XXXXXXX", 0x0A
+    f5 db "5| XX   XX", 0x0A
+    f6 db "6|     O  ", 0x0A
     f7 db "7|   O    ", 0
 
     ; Casillas válidas: 13 14 15
@@ -62,14 +62,6 @@ cicloJuego:
 mostrarTablero:
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnas
-    mImprimirPuts f1
-    mImprimirPuts f2
-    mImprimirPuts f3
-    mImprimirPuts f4
-    mImprimirPuts f5
-    mImprimirPuts f6
-    mImprimirPuts f7
-
     ret
 
 ; Código que escribí pelotudeando, seguramente haya que cambiarlo:
