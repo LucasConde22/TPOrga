@@ -10,6 +10,7 @@ section .data
     msgGanador db "El ganador es %c ¡Felicidades!",0
     msgCargandoArchivo db "Cargando partida anterior", 0
     msgPreguntaCargaArchivo db "¿Desea cargar la partida anterior? (S/N): ", 0
+    msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
     saltoLinea db 0
 
     columnas db " | 1234567", 0
@@ -33,6 +34,7 @@ section .data
     juegoTerminado db 'S'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
+    archivoGuardadoCorrectamente db 'S'
 section .bss
     buffer resw 1
     respuestaSN resb 101
@@ -86,7 +88,8 @@ cicloJuego:
     ; Mostrar tablero
     call mostrarTablero
     ;ingresarMov o q
-    cmp 
+    ;cmp ingreso, 'Q'
+    ;cmp ingreso, 'q'
     ;si q, salir
     ;efectuarMov
     ;chequearSiAlguienGano -> modifiica juegoTerminado y fichaGanador
@@ -96,9 +99,21 @@ cicloJuego:
 
 
 terminarJuego:
+    cmp byte[juegoTerminado], 'N'
+    je  ofrecerGuardado
     sub rsp, 8
     call mostrarGanador
     add rsp, 8 
+    jmp finDePrograma
+ofrecerGuardado:
+    mImprimirPuts msgPreguntaGuardadoArchivo
+    recibirSN
+    cmp respuestaSN, 'N'
+    je fin
+    call guardarProgreso
+    cmp byte[archivoGuardadoCorrectamente], 'N'
+    je ofrecerGuardado
+fin:
     ret
 
 ;*********Funciones de muestreo**********
@@ -145,7 +160,7 @@ validarEntradaPersonalizacion:
     call errorIngreso
     ;jmp personalizar Volver a preguntar???
 
-;*********Funciones auxiiliares**********
+;*********Funciones auxiliares**********
 retornoPersonalizacion:
     ret
 personalizacion:
@@ -154,7 +169,8 @@ personalizacion:
 cargarInfoArchivo:
     mImprimirPuts msgCargandoArchivo
     ret
-
+guardarProgreso:
+    ret
 ;********* Funciones de error **********
 errorIngreso:
     mov rdi, msgErrorIngreso
