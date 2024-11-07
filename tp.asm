@@ -11,6 +11,7 @@ section .data
     msgCargandoArchivo db "Cargando partida anterior", 0
     msgPreguntaCargaArchivo db "¿Desea cargar la partida anterior? (S/N): ", 0
     msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
+    msgSaludoFinal db "¡Gracias por jugar! ¡Hasta la próxima!", 0
     saltoLinea db 0
 
     msgPedirMovimiento db "Ingrese el movimiento a realizar: ", 0
@@ -36,10 +37,10 @@ section .data
     ;                   73 74 75
 
     ;Variables de estado
-    juegoTerminado db 'S'
+    juegoTerminado db 'N'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
-    archivoGuardadoCorrectamente db 'N'
+    archivoGuardadoCorrectamente db 'S'
 
 section .bss
     fila resb 1
@@ -85,12 +86,7 @@ cargarPartidaDesdeArchivo:
 
 personalizar:
     ; Mostrar mensaje de personalización
-    mov rdi, msgPersonalizar
-    sub rsp, 8
-    call printf
-    add rsp, 8
-
-    ; Leer respuesta
+    mImprimirPrintf msgPersonalizar
     mLeer
 
     ; Validar respuesta
@@ -115,6 +111,7 @@ cicloJuego:
     ; Chequear si el juego terminó ->  modificar variable juegoTerminado
     ;
 
+    mov byte[juegoTerminado], 'S' ; AGREGO ESTA LÍNEA PARA QUE NO ROMPA AL SALIR CON Q
     cmp byte[juegoTerminado], 'S'
     je  terminarJuego
     jmp cicloJuego
@@ -132,11 +129,17 @@ ofrecerGuardado:
     mLeer
     cmp byte[buffer], 'N'
     je fin
+    cmp byte[buffer], 'n'
+    je fin
     call guardarProgreso
     cmp byte[archivoGuardadoCorrectamente], 'N'
-    je ofrecerGuardado
+    je guardarProgreso
+
 fin:
-    ret
+    ; Sale con una syscall para poder finalizar el programa incluso desde un llamado a función
+    mImprimirPuts msgSaludoFinal
+    mov rax, 60
+    syscall ; Salir del programa
 
 ;*********Funciones de muestreo**********
 mostrarTablero:
@@ -147,29 +150,35 @@ mostrarTablero:
 
 validarEntradaCelda:
     ; Valida que la celda ingresada sea válida (que pertenezca al tablero):
+
+    cmp byte [buffer], 'q' ; Si se ingresa 'q', se termina el juego
+    je terminarJuego
+    cmp byte [buffer], 'Q'
+    je terminarJuego
+
     cmp byte [buffer + 2], 0
     jne errorIngreso ; No se ingresaron 2 caracteres
     mov ah, [buffer] ; Fila
     mov al, [buffer + 1] ; Columna
 
-    mov dh, 51 ; Col 3
-    mov dl, 53 ; Col 5
-    cmp ah, 49 ; Fila 1
+    mov dh, '3' ; Col 3
+    mov dl, '5' ; Col 5
+    cmp ah, '1' ; Fila 1
     je validarEntradaCeldaCol
     jl errorIngreso ; Fila < 1, error | DEBERÍAMOS LLAMAR A OTRO LUGAR Y QUE SE BIFURQUE PARA EJECUTAR DEVUELTA EL PEDIDO
-    cmp ah, 50 ; Fila 2
+    cmp ah, '2' ; Fila 2
     je validarEntradaCeldaCol
-    cmp ah, 54 ; Fila 6
+    cmp ah, '6' ; Fila 6
     je validarEntradaCeldaCol
-    cmp ah, 55 ; Fila 7
+    cmp ah, '7' ; Fila 7
     je validarEntradaCeldaCol
     jg errorIngreso ; Fila > 7, error
 
-    mov dh, 49 ; Col 1
-    mov dl, 55 ; Col 7
-    cmp ah, 51 ; Fila 3
+    mov dh, '1' ; Col 1
+    mov dl, '7' ; Col 7
+    cmp ah, '3' ; Fila 3
     je validarEntradaCeldaCol
-    cmp ah, 52 ; Fila 4
+    cmp ah, '4' ; Fila 4
     je validarEntradaCeldaCol
 
 validarEntradaCeldaCol:
