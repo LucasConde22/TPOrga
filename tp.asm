@@ -36,7 +36,7 @@ section .data
     ;                   73 74 75
 
     ;Variables de estado
-    juegoTerminado db 'N'
+    juegoTerminado db 'S'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
     archivoGuardadoCorrectamente db 'N'
@@ -117,9 +117,8 @@ cicloJuego:
     mLeer
     call validarEntradaCelda
 
-    
-    je  terminarJuego
-    ;;;
+    ; Chequear si el juego terminó ->  modificar variable juegoTerminado
+    ;
 
     cmp byte[juegoTerminado], 'S'
     je  terminarJuego
@@ -139,7 +138,6 @@ ofrecerGuardado:
     cmp byte[respuestaSN], 'N'
     je fin
     call guardarProgreso
-    mImprimirPuts 
     cmp byte[archivoGuardadoCorrectamente], 'N'
     je ofrecerGuardado
 fin:
