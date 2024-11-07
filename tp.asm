@@ -18,7 +18,7 @@ section .data
     msgDestino db "   Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
     formato db "%hhi", 0
 
-    columnas db " | 1234567", 0x0A
+    columnas db " | 1234567", 0
     f1 db "1|   XXX  ", 0x0A
     f2 db "2|   XXX  ", 0x0A
     f3 db "3| XXXXXXX", 0x0A
@@ -44,8 +44,7 @@ section .data
 section .bss
     fila resb 1
     columna resb 1
-    respuestaSN resb 101
-    buffer resq 1
+    buffer resb 101
 
 %macro mImprimirPrintf 1
     mov rdi, %1
@@ -62,15 +61,8 @@ section .bss
     add rsp, 8
 %endmacro
 
-%macro mLeer 0
+%macro mLeer 0 ; Almacena una repuesta ingresada por stdin del usuario (límite de 100 bytes para que no sobreescriba por accidente otras cosas)
     mov rdi, buffer
-    sub rsp, 8
-    call gets
-    add rsp, 8
-%endmacro
-
-%macro recibirSiNo 0; Almacena una repuesta ingresada por stdin del usuario (límite de 100 bytes para que no sobreescriba por accidente otras cosas)
-    mov rdi, respuestaSN
     sub rsp, 8
     call gets
     add rsp, 8
@@ -81,9 +73,9 @@ section .bss
 section .text
 main:
 cargarPartida:
-    mImprimirPuts msgPreguntaCargaArchivo
-    recibirSiNo
-    cmp byte[respuestaSN], 'S'
+    mImprimirPrintf msgPreguntaCargaArchivo
+    mLeer
+    cmp byte[buffer], 'S'
     jne personalizar ;  Si se quiere comenzar una partida de cero, se lleva a personalizar la misma
 cargarPartidaDesdeArchivo:
     call cargarInfoArchivo
@@ -113,9 +105,12 @@ cicloJuego:
     mImprimirPrintf msgFicha
     mLeer
     call validarEntradaCelda
+    call encontrarDireccionCelda
+    
     mImprimirPrintf msgDestino
     mLeer
     call validarEntradaCelda
+    call encontrarDireccionCelda
 
     ; Chequear si el juego terminó ->  modificar variable juegoTerminado
     ;
@@ -134,8 +129,8 @@ terminarJuego:
     jmp fin
 ofrecerGuardado:
     mImprimirPuts msgPreguntaGuardadoArchivo
-    recibirSiNo
-    cmp byte[respuestaSN], 'N'
+    mLeer
+    cmp byte[buffer], 'N'
     je fin
     call guardarProgreso
     cmp byte[archivoGuardadoCorrectamente], 'N'
@@ -147,12 +142,15 @@ fin:
 mostrarTablero:
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnas
+    mImprimirPuts f1
     ret
 
 validarEntradaCelda:
     ; Valida que la celda ingresada sea válida (que pertenezca al tablero):
-    mov al, [buffer] ; Columna
-    mov ah, [buffer + 1] ; Fila
+    cmp byte [buffer + 2], 0
+    jne errorIngreso ; No se ingresaron 2 caracteres
+    mov ah, [buffer] ; Fila
+    mov al, [buffer + 1] ; Columna
 
     mov dh, 51 ; Col 3
     mov dl, 53 ; Col 5
@@ -203,6 +201,23 @@ validarEntradaCeldaCol:
     
     ret
 
+encontrarDireccionCelda:
+    ; Ya teniendo guardada la fila y columna, busca la dirección de memoria de la celda
+    ; 3 + (columna-1) + 11 * (fila-1)
+    mov rbx, f1
+
+    movzx rax, byte [columna]
+    dec rax
+    add rax, 3
+
+    add rbx, rax
+
+    movzx rax, byte [fila]
+    dec rax
+    imul rax, 11
+
+    add rbx, rax ; Finalmente, queda en rbx la dirección de memoria de la celda buscada
+    ret
 
 mostrarGanador:
     mov rdi, msgGanador
