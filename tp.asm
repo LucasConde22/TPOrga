@@ -31,10 +31,10 @@ section .data
     ;                   73 74 75
 
     ;Variables de estado
-    juegoTerminado db 'S'
+    juegoTerminado db 'N'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
-    archivoGuardadoCorrectamente db 'S'
+    archivoGuardadoCorrectamente db 'N'
 section .bss
     buffer resw 1
     respuestaSN resb 101
@@ -54,7 +54,7 @@ section .bss
 %endmacro
 
 
-;*********Funciones de muestreo**********
+;********* Programa principal **********
 section .text
 main:
 cargarPartida:
@@ -87,16 +87,23 @@ personalizar:
 cicloJuego:
     ; Mostrar tablero
     call mostrarTablero
+    ;;;; Para no armar un bucle infinito y poder probar cosas
+    recibirSiNo
+    cmp byte[respuestaSN], 'S';;;;;;;;;;;;;;;;;;;;;;;;;;
+    je  terminarJuego
+    ;;;
+
     ;ingresarMov o q
     ;cmp ingreso, 'Q'
     ;cmp ingreso, 'q'
     ;si q, salir
     ;efectuarMov
-    ;chequearSiAlguienGano -> modifiica juegoTerminado y fichaGanador
+    ;chequearSiAlguienGano -> modifica juegoTerminado y fichaGanador
+
     cmp byte[juegoTerminado], 'S'
     je  terminarJuego
+    jmp cicloJuego
     ret
-
 
 terminarJuego:
     cmp byte[juegoTerminado], 'N'
@@ -104,13 +111,14 @@ terminarJuego:
     sub rsp, 8
     call mostrarGanador
     add rsp, 8 
-    jmp finDePrograma
+    jmp fin
 ofrecerGuardado:
     mImprimirPuts msgPreguntaGuardadoArchivo
-    recibirSN
-    cmp respuestaSN, 'N'
+    recibirSiNo
+    cmp byte[respuestaSN], 'N'
     je fin
     call guardarProgreso
+    mImprimirPuts 
     cmp byte[archivoGuardadoCorrectamente], 'N'
     je ofrecerGuardado
 fin:
@@ -156,7 +164,7 @@ validarEntradaPersonalizacion:
     je retornoPersonalizacion
     cmp ax, 110 ; n
     je retornoPersonalizacion
-
+    ret;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     call errorIngreso
     ;jmp personalizar Volver a preguntar???
 
