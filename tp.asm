@@ -7,6 +7,10 @@ section .data
     msgPersonalizar db "¿Desea personalizar la partida? (S/N): ", 0
     msgErrorIngreso db "Ingreso inválido, intente nuevamente.", 0
     msgEstadoTablero db "Estado actual del tablero:", 0
+    msgGanador db "El ganador es %c ¡Felicidades!",0
+    msgCargandoArchivo db "Cargando partida anterior", 0
+    msgPreguntaCargaArchivo db "¿Desea cargar la partida anterior? (S/N): ", 0
+    saltoLinea db 0
 
     columnas db " | 1234567", 0
     f1 db "1|   XXX  ", 0
@@ -25,8 +29,13 @@ section .data
     ;                   63 64 65
     ;                   73 74 75
 
+    ;Variables de estado
+    juegoTerminado db 'S'
+    fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
+    archivoCargadoCorrectamente db 'S'
 section .bss
     buffer resw 1
+    respuestaSN resb 101
 
 %macro mImprimirPuts 1
     mov rdi, %1
@@ -35,10 +44,30 @@ section .bss
     add rsp, 8
 %endmacro
 
+%macro recibirSiNo 0; Almacena una repuesta ingresada por stdin del usuario (límite de 100 bytes para que no sobreescriba por accidente otras cosas)
+    mov rdi, respuestaSN
+    sub rsp, 8
+    call gets
+    add rsp, 8
+%endmacro
+
+
+;*********Funciones de muestreo**********
 section .text
 main:
-    ; Mostrar mensaje de personalización
+cargarPartida:
+    mImprimirPuts msgPreguntaCargaArchivo
+    recibirSiNo
+    cmp byte[respuestaSN], 'S'
+    jne personalizar ;  Si se quiere comenzar una partida de cero, se lleva a personalizar la misma
+cargarPartidaDesdeArchivo:
+    call cargarInfoArchivo
+    cmp byte[archivoCargadoCorrectamente], 'N'
+    je cargarPartida
+    jmp cicloJuego
+
 personalizar:
+    ; Mostrar mensaje de personalización
     mov rdi, msgPersonalizar
     sub rsp, 8
     call printf
@@ -56,9 +85,23 @@ personalizar:
 cicloJuego:
     ; Mostrar tablero
     call mostrarTablero
-
+    ;ingresarMov o q
+    cmp 
+    ;si q, salir
+    ;efectuarMov
+    ;chequearSiAlguienGano -> modifiica juegoTerminado y fichaGanador
+    cmp byte[juegoTerminado], 'S'
+    je  terminarJuego
     ret
 
+
+terminarJuego:
+    sub rsp, 8
+    call mostrarGanador
+    add rsp, 8 
+    ret
+
+;*********Funciones de muestreo**********
 mostrarTablero:
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnas
@@ -72,6 +115,20 @@ mostrarTablero:
 
     ret
 
+mostrarGanador:
+    mov rdi, msgGanador
+    mov rsi, [fichaGanador]
+    sub rsp, 8
+    call printf
+    add rsp, 8
+
+    sub rsp, 8
+    mov rdi, saltoLinea
+    call puts
+    add rsp, 8
+
+
+;********* Funciones de validacion **********
 ; Código que escribí pelotudeando, seguramente haya que cambiarlo:
 validarEntradaPersonalizacion:
     mov ax, [buffer]
@@ -88,13 +145,17 @@ validarEntradaPersonalizacion:
     call errorIngreso
     ;jmp personalizar Volver a preguntar???
 
+;*********Funciones auxiiliares**********
 retornoPersonalizacion:
     ret
-
 personalizacion:
-    ; Personalizar tablero (Hacer último!)
+    ret
+;********* Funciones de guardado/carga de partida ***********
+cargarInfoArchivo:
+    mImprimirPuts msgCargandoArchivo
     ret
 
+;********* Funciones de error **********
 errorIngreso:
     mov rdi, msgErrorIngreso
     sub rsp, 8
