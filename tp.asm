@@ -75,7 +75,7 @@ section .text
 main:
 cargarPartida:
     mImprimirPrintf msgPreguntaCargaArchivo
-    mLeer
+    call recibirSiNo
     cmp byte[buffer], 'S'
     jne personalizar ;  Si se quiere comenzar una partida de cero, se lleva a personalizar la misma
 cargarPartidaDesdeArchivo:
@@ -87,7 +87,9 @@ cargarPartidaDesdeArchivo:
 personalizar:
     ; Mostrar mensaje de personalización
     mImprimirPrintf msgPersonalizar
-    mLeer
+    call recibirSiNo
+    cmp byte[buffer], 'N'
+    je cicloJuego
 
     ; Validar respuesta
     call validarEntradaPersonalizacion ; Desarrolar al final!
@@ -126,11 +128,10 @@ terminarJuego:
     jmp fin
 ofrecerGuardado:
     mImprimirPuts msgPreguntaGuardadoArchivo
-    mLeer
-    cmp byte[buffer], 'N'
+    call recibirSiNo ;Ya se ocupa de recibir un si o no en buffer
+    cmp byte[buffer], 'N' ;Si el usuario no quiere guardar el progreso, el programa termina directamente
     je fin
-    cmp byte[buffer], 'n'
-    je fin
+
     call guardarProgreso
     cmp byte[archivoGuardadoCorrectamente], 'N'
     je guardarProgreso
@@ -150,10 +151,8 @@ mostrarTablero:
 
 validarEntradaCelda:
     ; Valida que la celda ingresada sea válida (que pertenezca al tablero):
-
-    cmp byte [buffer], 'q' ; Si se ingresa 'q', se termina el juego
-    je terminarJuego
-    cmp byte [buffer], 'Q'
+    call reescribirBufferAMayusculas ; Si se ingresa 'q', se termina el juego
+    cmp byte [buffer], 'Q' 
     je terminarJuego
 
     cmp byte [buffer + 2], 0
@@ -263,6 +262,41 @@ retornoPersonalizacion:
     ret
 personalizacion:
     ret
+
+
+;La funcion pide al usuario que ingrese una respuesta valida (S/s/N/n) hasta que lo hace. Si
+;el usuario ingresa minusculas se encarga de pasarlo a mayusculas
+recibirSiNo:  
+    mLeer
+    cmp byte[buffer + 1], 0
+    jne siNoInvalido
+
+    cmp byte[buffer], 'S'
+    je recibirSiNoValido
+    cmp byte[buffer], 's'
+    je recibirSiNoValidoMin
+
+    cmp byte[buffer], 'N'
+    je recibirSiNoValido
+    cmp byte[buffer], 'n'
+    je recibirSiNoValidoMin
+siNoInvalido:    
+    ;No es una respuesta válida, vuelvo a pedir nuevo ingreso
+    mImprimirPuts msgErrorIngreso
+    jmp recibirSiNo
+recibirSiNoValidoMin:
+    call reescribirBufferAMayusculas
+recibirSiNoValido:
+    ret
+
+;Asume que hay un caracter en el buffer y si es minúscula lo pasa a mayúsculas
+reescribirBufferAMayusculas:
+    cmp byte[buffer], 61
+    jl  terminarReescribirBufferAMayusculas ;Se asume ya está en may
+    sub byte[buffer], 32
+terminarReescribirBufferAMayusculas:
+    ret
+
 ;********* Funciones de guardado/carga de partida ***********
 cargarInfoArchivo:
     mImprimirPuts msgCargandoArchivo
