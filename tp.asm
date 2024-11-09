@@ -14,7 +14,7 @@ section .data
     msgSaludoFinal db "¡Gracias por jugar! ¡Hasta la próxima!", 0
     saltoLinea db 0
 
-    msgPedirMovimiento db "Ingrese el movimiento a realizar: ", 0
+    msgPedirMovimiento db "Ingrese el movimiento de %s a realizar: ", 0x0a, 0
     msgFicha db "   Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
     msgDestino db "   Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
     formato db "%hhi", 0
@@ -41,14 +41,24 @@ section .data
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
     archivoGuardadoCorrectamente db 'S'
+    personajeMov db 'X', 0
+    cantidadSoldados db 24
 
 section .bss
     fila resb 1
     columna resb 1
-    buffer resb 101
 
-%macro mImprimirPrintf 1
+    filaActual resb 1
+    columnaActual resb 1
+    filaDestino resb 1
+    columnaDestino resb 1
+
+    buffer resb 101
+    qAux resq 1
+
+%macro mImprimirPrintf 2
     mov rdi, %1
+    mov rsi, %2
     sub rsp, 8
     call printf
     add rsp, 8
@@ -74,7 +84,7 @@ section .bss
 section .text
 main:
 cargarPartida:
-    mImprimirPrintf msgPreguntaCargaArchivo
+    mImprimirPrintf msgPreguntaCargaArchivo, 0
     call recibirSiNo
     cmp byte[buffer], 'S'
     jne personalizar ;  Si se quiere comenzar una partida de cero, se lleva a personalizar la misma
@@ -86,7 +96,7 @@ cargarPartidaDesdeArchivo:
 
 personalizar:
     ; Mostrar mensaje de personalización
-    mImprimirPrintf msgPersonalizar
+    mImprimirPrintf msgPersonalizar, 0
     call recibirSiNo
     cmp byte[buffer], 'N'
     je cicloJuego
@@ -99,23 +109,57 @@ cicloJuego:
     call mostrarTablero
 
     ; Pedir movimiento
-    mImprimirPuts msgPedirMovimiento
-    mImprimirPrintf msgFicha
+    mImprimirPrintf msgPedirMovimiento, personajeMov
+    mImprimirPrintf msgFicha, 0
     mLeer
     call validarEntradaCelda
+    mov al, [fila]
+    mov [filaActual], al
+    mov al, [columna]
+    mov [columnaActual], al
+
     call encontrarDireccionCelda
+    mov al, [rbx]
+    cmp al, byte[personajeMov]
+    jne errorIngreso ; La ficha a mover no es la correcta
+    mov [qAux], rbx
     
-    mImprimirPrintf msgDestino
+    mImprimirPrintf msgDestino, 0
     mLeer
     call validarEntradaCelda
+    mov al, [fila]
+    mov [filaDestino], al
+    mov al, [columna]
+    mov [columnaDestino], al
+
     call encontrarDireccionCelda
+    cmp byte[rbx], ' '
+    jne errorIngreso ; La celda destino no está vacía
+
+    call chequearMovimientoCorrecto ; Chequear si el movimiento es correcto
+
+    ; Realizar movimiento:
+    mov rcx, [qAux]
+    mov byte[rcx], ' '
+    mov al, byte[personajeMov]
+    mov [rbx], al
 
     ; Chequear si el juego terminó ->  modificar variable juegoTerminado
-    ;
-
-    mov byte[juegoTerminado], 'S' ; AGREGO ESTA LÍNEA PARA QUE NO ROMPA AL SALIR CON Q
+    call chequearJuegoTerminado
     cmp byte[juegoTerminado], 'S'
     je  terminarJuego
+
+    ; Cambiar de personaje
+    mov al, byte[cSoldados]
+    cmp al, byte[personajeMov]
+    je  cambiarAOficiales
+    mov byte[personajeMov], al
+    jmp finCambio
+cambiarAOficiales:
+    mov al, byte[cOficiales]
+    mov byte[personajeMov], al
+finCambio:
+
     jmp cicloJuego
     ret
 
@@ -135,7 +179,6 @@ ofrecerGuardado:
     call guardarProgreso
     cmp byte[archivoGuardadoCorrectamente], 'N'
     je guardarProgreso
-
 fin:
     ; Sale con una syscall para poder finalizar el programa incluso desde un llamado a función
     mImprimirPuts msgSaludoFinal
@@ -227,6 +270,51 @@ encontrarDireccionCelda:
     add rbx, rax ; Finalmente, queda en rbx la dirección de memoria de la celda buscada
     ret
 
+chequearMovimientoCorrecto:
+    ; Chequea si el movimiento es correcto, es decir, si el movimiento está dentro del rango de movimientos válidos
+    mov al, byte[personajeMov]
+    cmp al, byte[cSoldados]
+    jne chequearMovimientoCorrectoOficiales
+
+    ; Chequear si el movimiento es correcto para los soldados
+    cmp byte[filaActual], 5
+    je movimientoCostadoSoldados
+    ; Chequear si el movimiento es correcto para los soldados en las filas 'no rojas'
+    mov al, byte[filaDestino]
+    sub al, byte[filaActual]
+    cmp al, 1
+    jl errorIngreso
+    jmp chequeoColumnasMovSoldados
+movimientoCostadoSoldados:
+    ; Chequear si el movimiento es correcto para los soldados en la fila 5
+    cmp byte[filaDestino], 5
+    jne errorIngreso
+chequeoColumnasMovSoldados:
+    mov al, byte[columnaDestino]
+    sub al, byte[columnaActual]
+    cmp al, 1
+    jg errorIngreso
+    cmp al, -1
+    jl errorIngreso
+    ret
+
+chequearMovimientoCorrectoOficiales:
+    ; Chequea si el movimiento es correcto para los oficiales
+    mov al, byte[filaDestino]
+    sub al, byte[filaActual]
+    cmp al, 1
+    jg errorIngreso
+    cmp al, -1
+    jl errorIngreso
+
+    mov al, byte[columnaDestino]
+    sub al, byte[columnaActual]
+    cmp al, 1
+    jg errorIngreso
+    cmp al, -1
+    jl errorIngreso
+    ret
+
 mostrarGanador:
     mov rdi, msgGanador
     mov rsi, [fichaGanador]
@@ -296,6 +384,36 @@ reescribirBufferAMayusculas:
     sub byte[buffer], 32
 terminarReescribirBufferAMayusculas:
     ret
+
+chequearJuegoTerminado:
+    cmp byte[cantidadSoldados], 9
+    jge juegoNoTermino
+    jmp juegoTermino
+
+    mov al, 5
+    mov ah, 3
+cicloVerificacionTermino: ; Creo que no funciona correctamente
+    mov byte[fila], al
+    mov byte[columna], ah
+    call encontrarDireccionCelda
+    mov al, [rbx]
+    cmp al, byte[cSoldados]
+    jne juegoNoTermino
+
+    inc ah
+    cmp ah, 6
+    jl cicloVerificacionTermino
+    mov ah, 3
+    inc al
+    cmp al, 8
+    jl cicloVerificacionTermino
+
+juegoTermino:
+    mov byte[juegoTerminado], 'S'
+
+juegoNoTermino:
+    ret
+
 
 ;********* Funciones de guardado/carga de partida ***********
 cargarInfoArchivo:
