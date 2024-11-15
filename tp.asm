@@ -5,7 +5,7 @@ section .data
     cSoldados db "X", 0
     cOficiales db "O", 0
     msgPersonalizar db "¿Desea personalizar la partida? (S/N): ", 0
-    msgErrorIngreso db "Ingreso inválido, intente nuevamente.", 0
+    msgErrorIngreso db "¡Ingreso inválido, intente nuevamente!", 0
     msgEstadoTablero db "Estado actual del tablero:", 0
     msgGanador db "El ganador es %c ¡Felicidades!",0
     msgCargandoArchivo db "Cargando partida anterior", 0
@@ -63,7 +63,6 @@ section .bss
     call printf
     add rsp, 8
 %endmacro
-    
 
 %macro mImprimirPuts 1
     mov rdi, %1
@@ -110,9 +109,12 @@ cicloJuego:
 
     ; Pedir movimiento
     mImprimirPrintf msgPedirMovimiento, personajeMov
+actual:
     mImprimirPrintf msgFicha, 0
     mLeer
     call validarEntradaCelda
+    cmp rax, 1
+    je actual ; Error en la entrada
     mov al, [fila]
     mov [filaActual], al
     mov al, [columna]
@@ -121,12 +123,18 @@ cicloJuego:
     call encontrarDireccionCelda
     mov al, [rbx]
     cmp al, byte[personajeMov]
-    jne errorIngreso ; La ficha a mover no es la correcta
+    je continuarIngresoActual
+    call errorIngreso ; La ficha a mover no es la correcta
+    jmp actual
+continuarIngresoActual: ; No me gusta mucho esta parte del código, pero no encuentro otra forma de hacer un 'call condicional'  a errorIngreso
     mov [qAux], rbx
     
+destino:
     mImprimirPrintf msgDestino, 0
     mLeer
     call validarEntradaCelda
+    cmp rax, 1
+    je destino ; Error en la entrada
     mov al, [fila]
     mov [filaDestino], al
     mov al, [columna]
@@ -134,9 +142,14 @@ cicloJuego:
 
     call encontrarDireccionCelda
     cmp byte[rbx], ' '
-    jne errorIngreso ; La celda destino no está vacía
+    je continuarIngresoDestino
+    call errorIngreso ; La celda destino no está vacía
+    jmp destino
+continuarIngresoDestino:
 
     call chequearMovimientoCorrecto ; Chequear si el movimiento es correcto
+    cmp rax, 1
+    je actual ; No se movió a una celda dentro del rango permitido 
 
     ; Realizar movimiento:
     mov rcx, [qAux]
@@ -250,6 +263,7 @@ validarEntradaCeldaCol:
     call sscanf
     add rsp, 16
     
+    mov rax, 0
     ret
 
 encontrarDireccionCelda:
@@ -296,6 +310,8 @@ chequeoColumnasMovSoldados:
     jg errorIngreso
     cmp al, -1
     jl errorIngreso
+
+    mov rax, 0
     ret
 
 chequearMovimientoCorrectoOficiales:
@@ -313,6 +329,8 @@ chequearMovimientoCorrectoOficiales:
     jg errorIngreso
     cmp al, -1
     jl errorIngreso
+
+    mov rax, 0
     ret
 
 mostrarGanador:
@@ -379,9 +397,9 @@ recibirSiNoValido:
 
 ;Asume que hay un caracter en el buffer y si es minúscula lo pasa a mayúsculas
 reescribirBufferAMayusculas:
-    cmp byte[buffer], 61
+    cmp byte [buffer], 97
     jl  terminarReescribirBufferAMayusculas ;Se asume ya está en may
-    sub byte[buffer], 32
+    sub byte [buffer], 32
 terminarReescribirBufferAMayusculas:
     ret
 
@@ -427,4 +445,5 @@ errorIngreso:
     sub rsp, 8
     call puts
     add rsp, 8
+    mov rax, 1
     ret
