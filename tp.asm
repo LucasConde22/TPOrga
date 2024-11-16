@@ -37,6 +37,7 @@ section .data
     ;                   73 74 75
 
     ;Variables de estado
+    rotaciones db 0
     juegoTerminado db 'N'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
@@ -134,6 +135,15 @@ continuarIngresoActual: ; No me gusta mucho esta parte del código, pero no encu
 destino:
     mImprimirPrintf msgDestino, 0
     mLeer
+    mov rcx, 0
+    mov cl, byte[rotaciones]
+    cmp rcx, 0
+    je validarCelda
+rotarIngreso:
+    mov rdi, buffer
+    call rotarCoordenadasIzq         ; Rotamos el ingreso del usuario hacia izq (ya que el usuario lo ve rotado a derecha)
+    loop rotarIngreso
+validarCelda:
     call validarEntradaCelda
     cmp rax, 1
     je destino ; Error en la entrada
@@ -376,21 +386,18 @@ mostrarGanador:
 ;********* Funciones de validacion **********
 ; Código que escribí pelotudeando, seguramente haya que cambiarlo:
 validarEntradaPersonalizacion:
+    call reescribirBufferAMayusculas
     mov ax, [buffer]
     cmp ax, 83 ; S
     je personalizacion
-    cmp ax, 115 ; s
-    je personalizacion
 
     cmp ax, 78 ; N
-    je retornoPersonalizacion
-    cmp ax, 110 ; n
     je retornoPersonalizacion
     ret;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     call errorIngreso
     ;jmp personalizar Volver a preguntar???
 
-;;********* Funciones de rotacion **********
+; ********* Funciones de rotacion **********
 rotarCoordenadasDer: ;rdi llega con puntero a Fila (su byte contiguo es la columna)
     mov rdi, rsi        ; ColNueva = FilaVieja
     add rdi, 1          ; FilNueva = abs(ColVieja - 7) + 1
@@ -455,15 +462,13 @@ recibirSiNo:
     cmp byte[buffer + 1], 0
     jne siNoInvalido
 
+    call reescribirBufferAMayusculas
+
     cmp byte[buffer], 'S'
     je recibirSiNoValido
-    cmp byte[buffer], 's'
-    je recibirSiNoValidoMin
 
     cmp byte[buffer], 'N'
     je recibirSiNoValido
-    cmp byte[buffer], 'n'
-    je recibirSiNoValidoMin
 siNoInvalido:    
     ;No es una respuesta válida, vuelvo a pedir nuevo ingreso
     mImprimirPuts msgErrorIngreso
@@ -476,7 +481,7 @@ recibirSiNoValido:
 ;Asume que hay un caracter en el buffer y si es minúscula lo pasa a mayúsculas
 reescribirBufferAMayusculas:
     cmp byte [buffer], 97
-    jl  terminarReescribirBufferAMayusculas ;Se asume ya está en may
+    jl  terminarReescribirBufferAMayusculas ;Se asume ya está en mayúsculas
     sub byte [buffer], 32
 terminarReescribirBufferAMayusculas:
     ret
