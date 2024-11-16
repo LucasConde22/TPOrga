@@ -43,6 +43,8 @@ section .data
     archivoGuardadoCorrectamente db 'S'
     personajeMov db 'X', 0
     cantidadSoldados db 24
+    posOficial1 db 6, 5
+    posOficial2 db 7, 3
 
 section .bss
     fila resb 1
@@ -157,12 +159,15 @@ continuarIngresoDestino:
     mov al, byte[personajeMov]
     mov [rbx], al
 
+    ; Actualizar posición guardada de oficiales (el chequeo de si se está moviendo un oficial se hace dentro de la función)
+    call guardarPosActualOficiales
+
     ; Chequear si el juego terminó ->  modificar variable juegoTerminado
     call chequearJuegoTerminado
     cmp byte[juegoTerminado], 'S'
     je  terminarJuego
 
-    ; Cambiar de personaje
+    ; Cambiar de personaje y/o actualizar posición guardada de oficiales
     mov al, byte[cSoldados]
     cmp al, byte[personajeMov]
     je  cambiarAOficiales
@@ -220,7 +225,7 @@ validarEntradaCelda:
     mov dl, '5' ; Col 5
     cmp ah, '1' ; Fila 1
     je validarEntradaCeldaCol
-    jl errorIngreso ; Fila < 1, error | DEBERÍAMOS LLAMAR A OTRO LUGAR Y QUE SE BIFURQUE PARA EJECUTAR DEVUELTA EL PEDIDO
+    jl errorIngreso ; Fila < 1, error
     cmp ah, '2' ; Fila 2
     je validarEntradaCeldaCol
     cmp ah, '6' ; Fila 6
@@ -367,6 +372,29 @@ validarEntradaPersonalizacion:
 retornoPersonalizacion:
     ret
 personalizacion:
+    ret
+
+guardarPosActualOficiales:
+    ; Guarda la posición actual de los oficiales
+    mov al, byte[cOficiales]
+    cmp al, byte[personajeMov]
+    jne gurdarPosActualOficialesFinalizo
+
+    mov al, byte[filaActual]
+    mov ah, byte[columnaActual]
+    mov bx, word[posOficial1]
+    cmp bx, ax
+    jne guardarPosOficial2
+
+    mov byte[posOficial1], al
+    mov byte[posOficial1 + 1], ah
+    jmp gurdarPosActualOficialesFinalizo
+
+guardarPosOficial2:
+    mov byte[posOficial2], al
+    mov byte[posOficial2 + 1], ah
+
+gurdarPosActualOficialesFinalizo:
     ret
 
 
