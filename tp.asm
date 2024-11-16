@@ -24,9 +24,9 @@ section .data
     f2 db "2|   XXX  ", 0x0A
     f3 db "3| XXXXXXX", 0x0A
     f4 db "4| XXXXXXX", 0x0A
-    f5 db "5| XXX XXX", 0x0A
-    f6 db "6|   XXX  ", 0x0A
-    f7 db "7|   XXX  ", 0
+    f5 db "5| XX   XX", 0x0A
+    f6 db "6|     O  ", 0x0A
+    f7 db "7|   O    ", 0
 
     ; Casillas válidas: 13 14 15
     ;                   23 24 25
