@@ -146,7 +146,7 @@ destino:
     cmp byte[rbx], ' '
     je continuarIngresoDestino
     call errorIngreso ; La celda destino no está vacía
-    jmp destino
+    jmp actual
 continuarIngresoDestino:
 
     call chequearMovimientoCorrecto ; Chequear si el movimiento es correcto
@@ -218,34 +218,10 @@ validarEntradaCelda:
 
     cmp byte [buffer + 2], 0
     jne errorIngreso ; No se ingresaron 2 caracteres
-    mov ah, [buffer] ; Fila
-    mov al, [buffer + 1] ; Columna
 
-    mov dh, '3' ; Col 3
-    mov dl, '5' ; Col 5
-    cmp ah, '1' ; Fila 1
-    je validarEntradaCeldaCol
-    jl errorIngreso ; Fila < 1, error
-    cmp ah, '2' ; Fila 2
-    je validarEntradaCeldaCol
-    cmp ah, '6' ; Fila 6
-    je validarEntradaCeldaCol
-    cmp ah, '7' ; Fila 7
-    je validarEntradaCeldaCol
-    jg errorIngreso ; Fila > 7, error
-
-    mov dh, '1' ; Col 1
-    mov dl, '7' ; Col 7
-    cmp ah, '3' ; Fila 3
-    je validarEntradaCeldaCol
-    cmp ah, '4' ; Fila 4
-    je validarEntradaCeldaCol
-
-validarEntradaCeldaCol:
-    cmp al, dh
-    jl errorIngreso
-    cmp al, dl
-    jg errorIngreso
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je errorIngreso ; Error en la entrada
 
     ; Podría hacer las conversiones antes, el manejo de errores creo que sería un poco mayor
     mov [buffer], ah
@@ -267,8 +243,44 @@ validarEntradaCeldaCol:
     sub rsp, 16
     call sscanf
     add rsp, 16
-    
+
     mov rax, 0
+    ret
+
+validarEntradaCeldaInterna:
+    mov ah, [buffer] ; Fila
+    mov al, [buffer + 1] ; Columna
+
+    mov dh, '3' ; Col 3
+    mov dl, '5' ; Col 5
+    cmp ah, '1' ; Fila 1
+    je validarEntradaCeldaCol
+    jl entradaCeldaInvalida ; Fila < 1, error
+    cmp ah, '2' ; Fila 2
+    je validarEntradaCeldaCol
+    cmp ah, '6' ; Fila 6
+    je validarEntradaCeldaCol
+    cmp ah, '7' ; Fila 7
+    je validarEntradaCeldaCol
+    jg entradaCeldaInvalida ; Fila > 7, error
+
+    mov dh, '1' ; Col 1
+    mov dl, '7' ; Col 7
+    cmp ah, '3' ; Fila 3
+    je validarEntradaCeldaCol
+    cmp ah, '4' ; Fila 4
+    je validarEntradaCeldaCol
+
+validarEntradaCeldaCol:
+    cmp al, dh
+    jl entradaCeldaInvalida
+    cmp al, dl
+    jg entradaCeldaInvalida
+    
+    mov rdx, 0
+    ret
+entradaCeldaInvalida:
+    mov rdx, 1
     ret
 
 encontrarDireccionCelda:
@@ -297,17 +309,27 @@ chequearMovimientoCorrecto:
 
     ; Chequear si el movimiento es correcto para los soldados
     cmp byte[filaActual], 5
-    je movimientoCostadoSoldados
+    je movimientoFilaRojaSoldados
+
+movimientoAdelanteDiagonalSoldados:
     ; Chequear si el movimiento es correcto para los soldados en las filas 'no rojas'
     mov al, byte[filaDestino]
     sub al, byte[filaActual]
     cmp al, 1
     jl errorIngreso
     jmp chequeoColumnasMovSoldados
-movimientoCostadoSoldados:
+
+movimientoFilaRojaSoldados:
     ; Chequear si el movimiento es correcto para los soldados en la fila 5
+    cmp byte[columnaActual], 5
+    jg esFilaRojaMovCostado
+    cmp byte[columnaActual], 3
+    jge movimientoAdelanteDiagonalSoldados
+
+esFilaRojaMovCostado:
     cmp byte[filaDestino], 5
     jne errorIngreso
+
 chequeoColumnasMovSoldados:
     mov al, byte[columnaDestino]
     sub al, byte[columnaActual]
@@ -386,7 +408,7 @@ guardarPosActualOficiales:
     cmp bx, ax
     jne guardarPosOficial2
 
-    mov byte[posOficial1], al
+    mov byte[posOficial1], al ; OPTIMIZAR?
     mov byte[posOficial1 + 1], ah
     jmp gurdarPosActualOficialesFinalizo
 
