@@ -390,6 +390,34 @@ validarEntradaPersonalizacion:
     call errorIngreso
     ;jmp personalizar Volver a preguntar???
 
+;;********* Funciones de rotacion **********
+rotarCoordenadasDer: ;rdi llega con puntero a Fila (su byte contiguo es la columna)
+    mov rdi, rsi        ; ColNueva = FilaVieja
+    add rdi, 1          ; FilNueva = abs(ColVieja - 7) + 1
+    call rotarCoordenadas
+    ret
+rotarCoordenadasIzq: ;rdi llega con puntero a Fila (su byte contiguo es la columna)
+    mov rax, rsi        ; FilNueva = ColVieja
+    mov rdi, rsi        ; ColNueva = abs(FilVieja - 7) + 1
+    mov rsi, rax
+    add rsi, 1
+    call rotarCoordenadas
+    ret
+rotarCoordenadas: ; En rsi y rdi cuentan con punteros a las dos coordenadas que se esperan
+                  ;rdi solo cambia de lugar, rsi cambia de lugar y se le hacen ciertas operaciones para eefctuar la rotación
+rotar:
+    mov al, [rsi] 
+    mov ah, [rdi]
+    mov [rsi], ah
+    sub al, 55   
+    cmp al, 0
+    jge esPositivo
+    neg al
+esPositivo:
+    add al, 49
+    mov byte[rdi], al
+    ret
+
 ;*********Funciones auxiliares**********
 retornoPersonalizacion:
     ret
