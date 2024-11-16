@@ -24,9 +24,9 @@ section .data
     f2 db "2|   XXX  ", 0x0A
     f3 db "3| XXXXXXX", 0x0A
     f4 db "4| XXXXXXX", 0x0A
-    f5 db "5| XX   XX", 0x0A
-    f6 db "6|     O  ", 0x0A
-    f7 db "7|   O    ", 0
+    f5 db "5| XXX XXX", 0x0A
+    f6 db "6|   XXX  ", 0x0A
+    f7 db "7|   XXX  ", 0
 
     ; Casillas válidas: 13 14 15
     ;                   23 24 25
@@ -403,27 +403,34 @@ reescribirBufferAMayusculas:
 terminarReescribirBufferAMayusculas:
     ret
 
+
 chequearJuegoTerminado:
+    mov al, byte[cSoldados]
+    cmp al, byte[personajeMov]
+    je chequearJuegoTerminadoSoldados
+
+    ; Chequear si el juego terminó para los oficiales
     cmp byte[cantidadSoldados], 9
     jge juegoNoTermino
     jmp juegoTermino
 
-    mov al, 5
-    mov ah, 3
+chequearJuegoTerminadoSoldados:
+    mov cl, 5
+    mov ch, 3
 cicloVerificacionTermino: ; Creo que no funciona correctamente
-    mov byte[fila], al
-    mov byte[columna], ah
+    mov byte[fila], cl
+    mov byte[columna], ch
     call encontrarDireccionCelda
     mov al, [rbx]
     cmp al, byte[cSoldados]
     jne juegoNoTermino
 
-    inc ah
-    cmp ah, 6
+    inc ch
+    cmp ch, 6
     jl cicloVerificacionTermino
-    mov ah, 3
-    inc al
-    cmp al, 8
+    mov ch, 3
+    inc cl
+    cmp cl, 8
     jl cicloVerificacionTermino
 
 juegoTermino:
