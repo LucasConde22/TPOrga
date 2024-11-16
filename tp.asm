@@ -19,14 +19,17 @@ section .data
     msgDestino db "   Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
     formato db "%hhi", 0
 
+    rojo db 0x1B, '[31m', 0
+    blanco db 0x1B, '[0m', 0
+    gris db 0x1B, '[90m', 0
     columnas db " | 1234567", 0
     f1 db "1|   XXX  ", 0x0A
     f2 db "2|   XXX  ", 0x0A
     f3 db "3| XXXXXXX", 0x0A
-    f4 db "4| XXXXXXX", 0x0A
-    f5 db "5| XXXX XX", 0x0A
-    f6 db "6|   XXO  ", 0x0A
-    f7 db "7|   OXX  ", 0
+    f4 db "4| XXXXXXX", 0
+    f5 db "5| XX   XX", 0
+    f6 db "6|     O  ", 0
+    f7 db "7|   O    ", 0
 
     ; Casillas válidas: 13 14 15
     ;                   23 24 25
@@ -204,10 +207,70 @@ fin:
     syscall ; Salir del programa
 
 ;*********Funciones de muestreo**********
+%macro mCambiarColor 1
+    ; Cambia el color de la terminal, macro utilizada en 'mostrarTablero'
+    push rbx
+    mImprimirPrintf %1, 0
+    pop rbx
+%endmacro
+
+%macro mImprimirFilasGrises 1
+    ; Imprime las filas grises del tablero, macro utilizada en 'mostrarTablero'
+    mov ax, [%1]
+    mov [buffer], ax
+    mov byte [buffer + 2], 0
+    sub rsp, 8
+    mImprimirPrintf buffer, 0
+    add rsp, 8
+    mCambiarColor gris
+    mImprimirPuts %1 + 2
+    mCambiarColor blanco
+%endmacro
+
 mostrarTablero:
+    ; Muestra el tablero en la terminal
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnas
     mImprimirPuts f1
+
+    mov rbx, 0
+imprimirTableroCiclo:
+    cmp rbx, 3 ; Los primeros 3 caracteres son si o si blancos
+    jl imprimirCaracter
+
+    mov al, byte[f5 + rbx]
+    cmp al, [cOficiales]
+    je cambiarBlanco ; Si la celda está dentro de las 'posiciones rojas' pero es un oficial, lo imprime en blanco
+    mCambiarColor rojo ; Si no, pasa a rojo
+    jmp contImprimirCaracter
+
+cambiarBlanco:
+    mCambiarColor blanco
+    jmp contImprimirCaracter
+
+contImprimirCaracter:
+    cmp rbx, 8
+    jge imprimirCaracter
+verificarGris:
+    cmp rbx, 5
+    jl imprimirCaracter
+    mCambiarColor gris ; Las columnas entre 5 y 7 son grises, sin importar el contenido
+
+imprimirCaracter:
+    mov al, byte[f5 + rbx]
+    mov [buffer], al
+    mov byte [buffer + 1], 0
+    push rbx
+    mImprimirPrintf buffer, 0
+    pop rbx
+    
+    inc rbx
+    cmp rbx, 10
+    jl imprimirTableroCiclo
+
+    mImprimirPuts blanco
+    mImprimirFilasGrises f6
+    mImprimirFilasGrises f7
     ret
 
 validarEntradaCelda:
