@@ -1,5 +1,5 @@
 global main
-extern printf, puts, gets, sscanf
+extern printf, puts, gets
 
 section .data
     cSoldados db "X", 0
@@ -19,13 +19,16 @@ section .data
     msgDestino db "   Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
     formato db "%hhi", 0
 
+    rojo db 0x1B, '[31m', 0
+    blanco db 0x1B, '[0m', 0
+    gris db 0x1B, '[90m', 0
     columnas db " | 1234567", 0
     f1 db "1|   XXX  ", 0x0A
     f2 db "2|   XXX  ", 0x0A
     f3 db "3| XXXXXXX", 0x0A
-    f4 db "4| XXXXXXX", 0x0A
-    f5 db "5| XX   XX", 0x0A
-    f6 db "6|     O  ", 0x0A
+    f4 db "4| XXXXXXX", 0
+    f5 db "5| XX   XX", 0
+    f6 db "6|     O  ", 0
     f7 db "7|   O    ", 0
 
     ; Casillas válidas: 13 14 15
@@ -204,10 +207,70 @@ fin:
     syscall ; Salir del programa
 
 ;*********Funciones de muestreo**********
+%macro mCambiarColor 1
+    ; Cambia el color de la terminal, macro utilizada en 'mostrarTablero'
+    push rbx
+    mImprimirPrintf %1, 0
+    pop rbx
+%endmacro
+
+%macro mImprimirFilasGrises 1
+    ; Imprime las filas grises del tablero, macro utilizada en 'mostrarTablero'
+    mov ax, [%1]
+    mov [buffer], ax
+    mov byte [buffer + 2], 0
+    sub rsp, 8
+    mImprimirPrintf buffer, 0
+    add rsp, 8
+    mCambiarColor gris
+    mImprimirPuts %1 + 2
+    mCambiarColor blanco
+%endmacro
+
 mostrarTablero:
+    ; Muestra el tablero en la terminal
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnas
     mImprimirPuts f1
+
+    mov rbx, 0
+imprimirTableroCiclo:
+    cmp rbx, 3 ; Los primeros 3 caracteres son si o si blancos
+    jl imprimirCaracter
+
+    mov al, byte[f5 + rbx]
+    cmp al, [cOficiales]
+    je cambiarBlanco ; Si la celda está dentro de las 'posiciones rojas' pero es un oficial, lo imprime en blanco
+    mCambiarColor rojo ; Si no, pasa a rojo
+    jmp contImprimirCaracter
+
+cambiarBlanco:
+    mCambiarColor blanco
+    jmp contImprimirCaracter
+
+contImprimirCaracter:
+    cmp rbx, 8
+    jge imprimirCaracter
+verificarGris:
+    cmp rbx, 5
+    jl imprimirCaracter
+    mCambiarColor gris ; Las columnas entre 5 y 7 son grises, sin importar el contenido
+
+imprimirCaracter:
+    mov al, byte[f5 + rbx]
+    mov [buffer], al
+    mov byte [buffer + 1], 0
+    push rbx
+    mImprimirPrintf buffer, 0
+    pop rbx
+    
+    inc rbx
+    cmp rbx, 10
+    jl imprimirTableroCiclo
+
+    mImprimirPuts blanco
+    mImprimirFilasGrises f6
+    mImprimirFilasGrises f7
     ret
 
 validarEntradaCelda:
@@ -224,25 +287,7 @@ validarEntradaCelda:
     je errorIngreso ; Error en la entrada
 
     ; Podría hacer las conversiones antes, el manejo de errores creo que sería un poco mayor
-    mov [buffer], ah
-    mov byte [buffer + 1], 0
-    mov [columna], al ; Aprovecho para guardar el caracter de la col, porque el llamado rompe rax
-    mov rdi, buffer
-    mov rsi, formato
-    mov rdx, fila
-    sub rsp, 16 ; Por qué 16? No sé
-    call sscanf
-    add rsp, 16
-
-    mov rax, [columna]
-    mov [buffer], al
-    mov byte [buffer + 1], 0
-    mov rdi, buffer
-    mov rsi, formato
-    mov rdx, columna
-    sub rsp, 16
-    call sscanf
-    add rsp, 16
+    call convertirFilaColumna
 
     mov rax, 0
     ret
@@ -402,19 +447,22 @@ guardarPosActualOficiales:
     cmp al, byte[personajeMov]
     jne gurdarPosActualOficialesFinalizo
 
+    mov dl, byte[filaDestino]
+    mov dh, byte[columnaDestino]
+
     mov al, byte[filaActual]
     mov ah, byte[columnaActual]
     mov bx, word[posOficial1]
     cmp bx, ax
     jne guardarPosOficial2
 
-    mov byte[posOficial1], al ; OPTIMIZAR?
-    mov byte[posOficial1 + 1], ah
+    mov byte[posOficial1], dl ; OPTIMIZAR?
+    mov byte[posOficial1 + 1], dh
     jmp gurdarPosActualOficialesFinalizo
 
 guardarPosOficial2:
-    mov byte[posOficial2], al
-    mov byte[posOficial2 + 1], ah
+    mov byte[posOficial2], dl
+    mov byte[posOficial2 + 1], dh
 
 gurdarPosActualOficialesFinalizo:
     ret
@@ -453,6 +501,14 @@ reescribirBufferAMayusculas:
 terminarReescribirBufferAMayusculas:
     ret
 
+convertirFilaColumna:
+    ; Convierte la fila y columna ingresadas a números
+    sub ah, 48
+    mov [fila], ah
+    sub al, 48
+    mov [columna], al
+    ret
+
 
 chequearJuegoTerminado:
     mov al, byte[cSoldados]
@@ -465,9 +521,14 @@ chequearJuegoTerminado:
     jmp juegoTermino
 
 chequearJuegoTerminadoSoldados:
+    ; Chequear si el juego terminó para los soldados
+    call chequearOficialesEncerrados
+    cmp rax, 0 ; Devuelve 1 si los oficiales no están encerrados, 0 si lo están
+    je juegoTermino
+
     mov cl, 5
     mov ch, 3
-cicloVerificacionTermino: ; Creo que no funciona correctamente
+cicloVerificacionTermino:
     mov byte[fila], cl
     mov byte[columna], ch
     call encontrarDireccionCelda
@@ -487,6 +548,104 @@ juegoTermino:
     mov byte[juegoTerminado], 'S'
 
 juegoNoTermino:
+    ret
+
+chequearOficialesEncerrados:
+    ; Chequea si los oficiales están encerrados
+    mov al, byte[posOficial1]
+    add al, 48 ; Lo paso a ASCII, para que funcione correctamente la función de validación
+    mov byte[buffer], al ; Fila
+    mov al, byte[posOficial1 + 1]
+    add al, 48
+    mov byte[buffer + 1], al ; Columna
+    call chequearOficialEncerrado
+    cmp rax, 1 ; Devuelve 1 si el oficial no está encerrado, 0 si lo está
+    je oficialNoEncerrado
+
+    mov al, byte[posOficial2]
+    add al, 48 ; Lo paso a ASCII
+    mov byte[buffer], al ; Fila
+    mov al, byte[posOficial2 + 1]
+    add al, 48
+    mov byte[buffer + 1], al ; Columna
+    call chequearOficialEncerrado
+    cmp rax, 1
+    je oficialNoEncerrado
+
+    mov rax, 0
+    ret
+
+%macro mAlrededorDeOficial 0 ; No sacar de acá, queda feo pero ayuda a leer el código
+    ; Chequea si hay un soldado alrededor de un oficial
+    call convertirFilaColumna
+    call encontrarDireccionCelda
+    mov al, [rbx]
+    cmp al, byte[cSoldados]
+    jne oficialNoEncerrado
+%endmacro
+
+chequearOficialEncerrado: ; SABEN CÓMO ACHICAR ESTA FUNCIÓN?
+    ; Chequea si un oficial está encerrado
+    inc byte[buffer]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor1
+    mAlrededorDeOficial
+
+siguienteAlrededor1:
+    inc byte[buffer + 1]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor2
+    mAlrededorDeOficial
+    
+siguienteAlrededor2:
+    dec byte[buffer]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor3
+    mAlrededorDeOficial
+
+siguienteAlrededor3:
+    dec byte[buffer]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor4
+    mAlrededorDeOficial
+
+siguienteAlrededor4:
+    dec byte[buffer + 1]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor5
+    mAlrededorDeOficial
+
+siguienteAlrededor5:
+    dec byte[buffer + 1]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor6
+    mAlrededorDeOficial
+
+siguienteAlrededor6:
+    inc byte[buffer]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor7
+    mAlrededorDeOficial
+
+siguienteAlrededor7:
+    inc byte[buffer]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je oficialEstaEncerrado
+    mAlrededorDeOficial
+
+oficialEstaEncerrado:
+    mov rax, 0
+    ret
+oficialNoEncerrado:
+    mov rax, 1
     ret
 
 
