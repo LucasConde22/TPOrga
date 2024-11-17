@@ -19,7 +19,7 @@ section .data
     msgDestino db "   Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
     formato db "%hhi", 0
 
-    columnas db " | 1234567", 0
+   columnas db " | 1234567", 0
     f1 db "1|   XXX  ", 0x0A
     f2 db "2|   XXX  ", 0x0A
     f3 db "3| XXXXXXX", 0x0A
@@ -27,6 +27,17 @@ section .data
     f5 db "5| XX   XX", 0x0A
     f6 db "6|     O  ", 0x0A
     f7 db "7|   O    ", 0
+
+    ; ****** Tablero a imprimirse ********;
+    columnasImp db " | 1234567", 0
+    f1Imp db "1|   XXX  ", 0x0A
+    f2Imp db "2|   XXX  ", 0x0A
+    f3Imp db "3| XXXXXXX", 0x0A
+    f4Imp db "4| XXXXXXX", 0x0A
+    f5Imp db "5| XX   XX", 0x0A
+    f6Imp db "6|     O  ", 0x0A
+    f7Imp db "7|   O    ", 0
+
 
     ; Casillas válidas: 13 14 15
     ;                   23 24 25
@@ -37,7 +48,7 @@ section .data
     ;                   73 74 75
 
     ;Variables de estado
-    rotaciones db 0
+    rotaciones db 1
     juegoTerminado db 'N'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
@@ -55,6 +66,10 @@ section .bss
     columnaActual resb 1
     filaDestino resb 1
     columnaDestino resb 1
+
+    filaOriginal resb 1
+    columnaOriginal resb 1
+    auxCopia resb 1
 
     buffer resb 101
     qAux resq 1
@@ -118,11 +133,14 @@ actual:
     call validarEntradaCelda
     cmp rax, 1
     je actual ; Error en la entrada
+
+
     mov al, [fila]
     mov [filaActual], al
     mov al, [columna]
     mov [columnaActual], al
 
+    mov rbx, f1
     call encontrarDireccionCelda
     mov al, [rbx]
     cmp al, byte[personajeMov]
@@ -139,10 +157,6 @@ destino:
     mov cl, byte[rotaciones]
     cmp rcx, 0
     je validarCelda
-rotarIngreso:
-    mov rdi, buffer
-    call rotarCoordenadasIzq         ; Rotamos el ingreso del usuario hacia izq (ya que el usuario lo ve rotado a derecha)
-    loop rotarIngreso
 validarCelda:
     call validarEntradaCelda
     cmp rax, 1
@@ -152,6 +166,7 @@ validarCelda:
     mov al, [columna]
     mov [columnaDestino], al
 
+    mov rbx, f1
     call encontrarDireccionCelda
     cmp byte[rbx], ' '
     je continuarIngresoDestino
@@ -215,10 +230,78 @@ fin:
 
 ;*********Funciones de muestreo**********
 mostrarTablero:
+    sub rsp, 16
+    call pasarTableroImpresion
     mImprimirPuts msgEstadoTablero
-    mImprimirPuts columnas
-    mImprimirPuts f1
+    mImprimirPuts columnasImp
+    mImprimirPuts f1Imp
+    add rsp, 16
     ret
+;*********Funciones de muestreo**********
+
+pasarTableroImpresion:
+    mov byte[fila], 3 ; Rota la fila central
+    mov byte[columna], 1
+    mov r12b, 7
+    mov r13b, 3
+    call pasarSector
+    mov byte[fila], 6 ; Rota la parte de abajo
+    mov byte[columna], 3
+    mov r12b, 3
+    mov r13b, 2
+    call pasarSector
+    mov byte[fila], 1 ; Rota la parte de arriba
+    mov byte[columna], 3
+    mov r12b, 3
+    mov r13b, 2
+    call pasarSector
+    ret
+
+pasarSector: ; en r12b (ancho), r11b (alto)
+    mov r8b, byte[columna]
+    mov [columnaOriginal], r8b
+    mov r9b, byte[fila]
+    mov [filaOriginal], r9b
+
+    mov r8b, 0
+    mov r9b, 0
+copiarFila:
+    mov r10b, [columnaOriginal] ; Cada vez que voy a copiar un valor inicializo otra vez mis valores de referencia
+    mov r11b, [filaOriginal]
+    mov [columna], r10b
+    mov [fila], r11b
+    add [columna], r8b
+    add [fila], r9b
+
+    mov rbx, f1
+    call encontrarDireccionCelda
+    mov r10b, [rbx]
+    mov [auxCopia], r10b
+
+    mov rcx, 0
+    mov cl, byte[rotaciones]
+    cmp cl, 0
+    je finRotarVeces
+rotarVeces:
+    call rotarCoordenadasDer
+    loop rotarVeces
+finRotarVeces:
+    mov rbx, f1Imp
+    call encontrarDireccionCelda
+
+    mov r10b, [auxCopia]
+    mov byte[rbx], r10b
+    inc r8b
+    cmp r8b, r12b
+    jl copiarFila
+finCopiarFila:
+    mov r8b, 0
+    inc r9b
+    cmp r9b, r13b
+    jl copiarFila
+    ret
+
+
 
 validarEntradaCelda:
     ; Valida que la celda ingresada sea válida (que pertenezca al tablero):
@@ -294,9 +377,9 @@ entradaCeldaInvalida:
     ret
 
 encontrarDireccionCelda:
+    ; en rbx está la posicion de la primera celda en memoria del tablero
     ; Ya teniendo guardada la fila y columna, busca la dirección de memoria de la celda
     ; 3 + (columna-1) + 11 * (fila-1)
-    mov rbx, f1
 
     movzx rax, byte [columna]
     dec rax
@@ -398,16 +481,14 @@ validarEntradaPersonalizacion:
     ;jmp personalizar Volver a preguntar???
 
 ; ********* Funciones de rotacion **********
-rotarCoordenadasDer: ;rdi llega con puntero a Fila (su byte contiguo es la columna)
-    mov rdi, rsi        ; ColNueva = FilaVieja
-    add rdi, 1          ; FilNueva = abs(ColVieja - 7) + 1
+rotarCoordenadasDer:
+    mov rsi, fila        ; FilNueva = ColVieja
+    mov rdi, columna          ; ColNueva = abs(FilVieja - 7) + 1
     call rotarCoordenadas
     ret
-rotarCoordenadasIzq: ;rdi llega con puntero a Fila (su byte contiguo es la columna)
-    mov rax, rsi        ; FilNueva = ColVieja
-    mov rdi, rsi        ; ColNueva = abs(FilVieja - 7) + 1
-    mov rsi, rax
-    add rsi, 1
+rotarCoordenadasIzq:
+    mov rsi, columna        ; ColNueva = FilaVieja
+    mov rdi, fila     ; FilNueva = abs(ColVieja - 7) + 1
     call rotarCoordenadas
     ret
 rotarCoordenadas: ; En rsi y rdi cuentan con punteros a las dos coordenadas que se esperan
@@ -415,15 +496,17 @@ rotarCoordenadas: ; En rsi y rdi cuentan con punteros a las dos coordenadas que 
 rotar:
     mov al, [rsi] 
     mov ah, [rdi]
-    mov [rsi], ah
-    sub al, 55   
+    mov [rsi], ah 
+    sub al, 7
     cmp al, 0
     jge esPositivo
     neg al
 esPositivo:
-    add al, 49
+    add al, 1
     mov byte[rdi], al
     ret
+
+
 
 ;*********Funciones auxiliares**********
 retornoPersonalizacion:
