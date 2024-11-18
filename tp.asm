@@ -409,7 +409,6 @@ finCopiarFila:
     ret
 
 
-
 validarEntradaCelda:
     ; Valida que la celda ingresada sea válida (que pertenezca al tablero):
     call reescribirBufferAMayusculas ; Si se ingresa 'q', se termina el juego
@@ -683,7 +682,7 @@ chequearJuegoTerminado:
     je chequearJuegoTerminadoSoldados
 
     ; Chequear si el juego terminó para los oficiales
-    cmp byte[cantidadSoldados], 9
+    cmp byte[cantidadSoldados], 9 ; Si la cantidad de soldados es 9, el juego terminó
     jge juegoNoTermino
     jmp juegoTermino
 
@@ -696,6 +695,7 @@ chequearJuegoTerminadoSoldados:
     mov cl, 5
     mov ch, 3
 cicloVerificacionTermino:
+    ; Verifica si la fortaleza se encuentra totalmente ocupada por soldados
     mov byte[fila], cl
     mov byte[columna], ch
     mov rbx, f1
@@ -738,6 +738,37 @@ chequearOficialesEncerrados:
     mOficialABuffer posOficial2
     jmp oficialEstaEncerrado
 
+%macro mChequeoRepetitivoDeAdyacentes 0
+    call chequearAdyacente
+    cmp rax, 1
+    je oficialNoEncerrado
+%endmacro
+
+chequearOficialEncerrado:
+    ; Chequea si un oficial está encerrado
+    inc byte[buffer]
+    mChequeoRepetitivoDeAdyacentes
+    inc byte[buffer + 1]
+    mChequeoRepetitivoDeAdyacentes
+    dec byte[buffer]
+    mChequeoRepetitivoDeAdyacentes
+    dec byte[buffer]
+    mChequeoRepetitivoDeAdyacentes
+    dec byte[buffer + 1]
+    mChequeoRepetitivoDeAdyacentes
+    dec byte[buffer + 1]
+    mChequeoRepetitivoDeAdyacentes
+    inc byte[buffer]
+    mChequeoRepetitivoDeAdyacentes
+    inc byte[buffer]
+    mChequeoRepetitivoDeAdyacentes
+oficialEstaEncerrado:
+    mov rax, 0
+    ret
+oficialNoEncerrado:
+    mov rax, 1
+    ret
+
 chequearAdyacente:
     ; Chequea si un adyacente es soldado o celda no válida
     call validarEntradaCeldaInterna
@@ -754,54 +785,6 @@ chequearAdyacente:
 siguienteAdyacente:
     jmp oficialEstaEncerrado ; Si por este lado se encuentra un soldado o la celda no pertenece al tablero
 
-chequearOficialEncerrado:
-    ; Chequea si un oficial está encerrado
-    inc byte[buffer]
-    call chequearAdyacente
-    cmp rax, 1
-    je oficialNoEncerrado
-
-    inc byte[buffer + 1]
-    call chequearAdyacente
-    cmp rax, 1
-    je oficialNoEncerrado
-    
-    dec byte[buffer]
-    call chequearAdyacente
-    cmp rax, 1
-    je oficialNoEncerrado
-
-    dec byte[buffer]
-    call chequearAdyacente
-    cmp rax, 1
-    je oficialNoEncerrado
-
-    dec byte[buffer + 1]
-    call chequearAdyacente
-    cmp rax, 1
-    je oficialNoEncerrado
-
-    dec byte[buffer + 1]
-    call chequearAdyacente
-    cmp rax, 1
-    je oficialNoEncerrado
-
-    inc byte[buffer]
-    call chequearAdyacente
-    cmp rax, 1
-    je oficialNoEncerrado
-
-    inc byte[buffer]
-    call chequearAdyacente
-    cmp rax, 1
-    je oficialNoEncerrado
-
-oficialEstaEncerrado:
-    mov rax, 0
-    ret
-oficialNoEncerrado:
-    mov rax, 1
-    ret
 
 ;********* Funciones de guardado/carga de partida ***********
 cargarInfoArchivo:
