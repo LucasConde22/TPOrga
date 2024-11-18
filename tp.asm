@@ -365,28 +365,18 @@ imprimirCaracter:
     mImprimirFilasGrises f6Imp
     mImprimirFilasGrises f7Imp
     ret
-;*********Funciones de muestreo**********
+
+
 ;pasarTableroImpresion pasa el contenido de la matrix interna a la matriz que se imprime por terminal, rotando a derecha
 ;ese contenido
 pasarTableroImpresion:
-    mov byte[fila], 1 ; Rota la fila central
-    mov byte[columna], 1
-    call pasarSector
-    ret
-
-pasarSector: ; en r12b (ancho), r11b (alto)  
-    mov r8b, byte[columna]
-    mov [columnaOriginal], r8b
-    mov r9b, byte[fila]
-    mov [filaOriginal], r9b
-
+    ; Rota todo el tablero (cuadrado de 7x7)
     mov r8b, 0
     mov r9b, 0
 copiarFila:
-    mov r10b, [columnaOriginal] ; Cada vez que voy a copiar un valor inicializo otra vez mis valores de referencia
-    mov r11b, [filaOriginal]
-    mov [columna], r10b
-    mov [fila], r11b
+    ; Cada vez que voy a copiar un valor inicializo otra vez mis valores de referencia (la celda 11)
+    mov byte[columna], 1
+    mov byte[fila], 1
     add [columna], r8b
     add [fila], r9b
 
@@ -440,11 +430,10 @@ validarEntradaCelda:
     mov cl, [rotaciones]
     cmp cl, 0
     je finRotarIngreso
-rotarIngreso:
+rotarIngreso:           ; Se rotan las coordenadas a izquierda para trabajar internamente con coordenadas "normales"
     call rotarCoordenadasIzq
     loop rotarIngreso
 finRotarIngreso:
-
     mov rax, 0
     ret
 
