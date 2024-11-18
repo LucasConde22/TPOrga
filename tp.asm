@@ -27,9 +27,9 @@ section .data
     msgDestino db "   Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
     formato db "%hhi", 0
 
-    rojo db 0x1B, '[31m', 0
+    rojo db 0x1B, '[1;31m', 0
     blanco db 0x1B, '[0m', 0
-    gris db 0x1B, '[90m', 0
+    gris db 0x1B, '[1;90m', 0
 
     columnas db " | 1234567", 0
     f1 db "1|   XXX  ", 0x0A
@@ -319,20 +319,19 @@ fin:
 
 mostrarTablero:
     ; Muestra el tablero en la terminal
-
     sub rsp, 16
     call pasarTableroImpresion
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnasImp
     mImprimirPuts f1Imp
     add rsp, 16
+
     mov rbx, 0
 imprimirTableroCiclo:
     cmp rbx, 3 ; Los primeros 3 caracteres son si o si blancos
     jl imprimirCaracter
 
     mov al, byte[f5Imp + rbx]
-
     cmp al, [cOficiales]
     je cambiarBlanco ; Si la celda está dentro de las 'posiciones rojas' pero es un oficial, lo imprime en blanco
     mCambiarColor rojo ; Si no, pasa a rojo
@@ -351,9 +350,7 @@ verificarGris:
     mCambiarColor gris ; Las columnas entre 5 y 7 son grises, sin importar el contenido
 
 imprimirCaracter:
-
     mov al, byte[f5Imp + rbx]
-
     mov [buffer], al
     mov byte [buffer + 1], 0
     push rbx
@@ -437,7 +434,6 @@ rotarIngreso:           ; Se rotan las coordenadas a izquierda para trabajar int
     call rotarCoordenadasIzq
     loop rotarIngreso
 finRotarIngreso:
-
     mov rax, 0
     ret
 
@@ -747,73 +743,63 @@ chequearOficialesEncerrados:
     mov rax, 0
     ret
 
-%macro mAlrededorDeOficial 0 ; No sacar de acá, queda feo pero ayuda a leer el código
-    ; Chequea si hay un soldado alrededor de un oficial
-    call convertirFilaColumna
+chequearAdyacente:
+    ; Chequea si un adyacente es soldado o celda no válida
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAdyacente
 
+    call convertirFilaColumna
     mov rbx, f1
     call encontrarDireccionCelda
     mov al, [rbx]
     cmp al, byte[cSoldados]
     jne oficialNoEncerrado
-%endmacro
+    
+siguienteAdyacente:
+    jmp oficialEstaEncerrado ; Si por este lado se encuentra un soldado o la celda no pertenece al tablero
 
-chequearOficialEncerrado: ; SABEN CÓMO ACHICAR ESTA FUNCIÓN?
+chequearOficialEncerrado:
     ; Chequea si un oficial está encerrado
     inc byte[buffer]
-    call validarEntradaCeldaInterna
-    cmp rdx, 1
-    je siguienteAlrededor1
-    mAlrededorDeOficial
+    call chequearAdyacente
+    cmp rax, 1
+    je oficialNoEncerrado
 
-siguienteAlrededor1:
     inc byte[buffer + 1]
-    call validarEntradaCeldaInterna
-    cmp rdx, 1
-    je siguienteAlrededor2
-    mAlrededorDeOficial
+    call chequearAdyacente
+    cmp rax, 1
+    je oficialNoEncerrado
     
-siguienteAlrededor2:
     dec byte[buffer]
-    call validarEntradaCeldaInterna
-    cmp rdx, 1
-    je siguienteAlrededor3
-    mAlrededorDeOficial
+    call chequearAdyacente
+    cmp rax, 1
+    je oficialNoEncerrado
 
-siguienteAlrededor3:
     dec byte[buffer]
-    call validarEntradaCeldaInterna
-    cmp rdx, 1
-    je siguienteAlrededor4
-    mAlrededorDeOficial
+    call chequearAdyacente
+    cmp rax, 1
+    je oficialNoEncerrado
 
-siguienteAlrededor4:
     dec byte[buffer + 1]
-    call validarEntradaCeldaInterna
-    cmp rdx, 1
-    je siguienteAlrededor5
-    mAlrededorDeOficial
+    call chequearAdyacente
+    cmp rax, 1
+    je oficialNoEncerrado
 
-siguienteAlrededor5:
     dec byte[buffer + 1]
-    call validarEntradaCeldaInterna
-    cmp rdx, 1
-    je siguienteAlrededor6
-    mAlrededorDeOficial
+    call chequearAdyacente
+    cmp rax, 1
+    je oficialNoEncerrado
 
-siguienteAlrededor6:
     inc byte[buffer]
-    call validarEntradaCeldaInterna
-    cmp rdx, 1
-    je siguienteAlrededor7
-    mAlrededorDeOficial
+    call chequearAdyacente
+    cmp rax, 1
+    je oficialNoEncerrado
 
-siguienteAlrededor7:
     inc byte[buffer]
-    call validarEntradaCeldaInterna
-    cmp rdx, 1
-    je oficialEstaEncerrado
-    mAlrededorDeOficial
+    call chequearAdyacente
+    cmp rax, 1
+    je oficialNoEncerrado
 
 oficialEstaEncerrado:
     mov rax, 0
