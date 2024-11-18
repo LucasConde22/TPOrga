@@ -319,19 +319,20 @@ fin:
 
 mostrarTablero:
     ; Muestra el tablero en la terminal
+
     sub rsp, 16
     call pasarTableroImpresion
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnasImp
     mImprimirPuts f1Imp
     add rsp, 16
-
     mov rbx, 0
 imprimirTableroCiclo:
     cmp rbx, 3 ; Los primeros 3 caracteres son si o si blancos
     jl imprimirCaracter
 
     mov al, byte[f5Imp + rbx]
+
     cmp al, [cOficiales]
     je cambiarBlanco ; Si la celda está dentro de las 'posiciones rojas' pero es un oficial, lo imprime en blanco
     mCambiarColor rojo ; Si no, pasa a rojo
@@ -350,7 +351,9 @@ verificarGris:
     mCambiarColor gris ; Las columnas entre 5 y 7 son grises, sin importar el contenido
 
 imprimirCaracter:
+
     mov al, byte[f5Imp + rbx]
+
     mov [buffer], al
     mov byte [buffer + 1], 0
     push rbx
@@ -434,6 +437,7 @@ rotarIngreso:           ; Se rotan las coordenadas a izquierda para trabajar int
     call rotarCoordenadasIzq
     loop rotarIngreso
 finRotarIngreso:
+
     mov rax, 0
     ret
 
@@ -746,6 +750,7 @@ chequearOficialesEncerrados:
 %macro mAlrededorDeOficial 0 ; No sacar de acá, queda feo pero ayuda a leer el código
     ; Chequea si hay un soldado alrededor de un oficial
     call convertirFilaColumna
+
     mov rbx, f1
     call encontrarDireccionCelda
     mov al, [rbx]
