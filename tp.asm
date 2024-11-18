@@ -1,14 +1,22 @@
 global main
-extern printf, puts, gets
+extern printf, puts, gets, fwrite, fread, fopen, fclose
 
 section .data
+    modoEscritura db "wb", 0
+    modoLectura db "rb", 0
+    nombreArchivo db "partidas.dat",0
     cSoldados db "X", 0
     cOficiales db "O", 0
     msgPersonalizar db "¿Desea personalizar la partida? (S/N): ", 0
+    msgPersonalizarSoldados db "¿Que simbolo usaran los soldados?: ", 0
+    msgPersonalizarOficiales db "¿Que simbolo usaran los oficiales?: ", 0
     msgErrorIngreso db "¡Ingreso inválido, intente nuevamente!", 0
     msgEstadoTablero db "Estado actual del tablero:", 0
     msgGanador db "El ganador es %c ¡Felicidades!",0
-    msgCargandoArchivo db "Cargando partida anterior", 0
+    msgErrorCargaPartida db "Todavia no hay una partida cargada. Por favor inicie una partida o termine", 0
+    msgErrorApertura db "Ocurrio un error al abrir un archivo", 0
+    msgCargandoArchivo db "Cargando partida anterior...", 0
+    msgGuardadoPartida db "Guardando datos de la partida....", 0
     msgPreguntaCargaArchivo db "¿Desea cargar la partida anterior? (S/N): ", 0
     msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
     msgSaludoFinal db "¡Gracias por jugar! ¡Hasta la próxima!", 0
@@ -30,6 +38,18 @@ section .data
     f5 db "5| XX   XX", 0
     f6 db "6|     O  ", 0
     f7 db "7|   O    ", 0
+
+    registroMatriz:
+        fichaSoldado db ' '
+        fichaOficial db ' '
+        jugadaActual db ' '
+        f1A times 10 db ' '
+        f2A times 10 db ' '
+        f3A times 10 db ' '
+        f4A times 10 db ' '
+        f5A times 10 db ' '
+        f6A times 10 db ' '
+        f7A times 10 db ' '
 
     ; Casillas válidas: 13 14 15
     ;                   23 24 25
@@ -61,6 +81,8 @@ section .bss
     buffer resb 101
     qAux resq 1
 
+    idArchivo resq 1
+
 %macro mImprimirPrintf 2
     mov rdi, %1
     mov rsi, %2
@@ -83,6 +105,48 @@ section .bss
     add rsp, 8
 %endmacro
 
+%macro mAbrirArchivo 2 
+    mov rdi, %1
+    mov rsi, %2
+    sub rsp,8
+    call fopen
+    add rsp,8
+%endmacro
+
+%macro mCerrarArchivo 1
+    mov rdi, [%1]
+    sub rsp,8
+    call fclose
+    add rsp,8
+%endmacro
+
+%macro mLeerArchivo 3 
+    mov rdi, %1
+    mov rsi, %2
+    mov rdx,1
+    mov rcx,[%3]
+    sub rsp,8
+    call fread
+    add rsp,8
+%endmacro
+
+%macro mEscribirArchivo 3 
+    mov rdi, %1
+    mov rsi, %2
+    mov rdx,1
+    mov rcx,[%3]
+    sub rsp,8
+    call fwrite
+    add rsp,8
+%endmacro
+
+%macro mRecuperarDato 3
+   mov rcx,%1
+   mov rsi,%2
+   mov rdi,%3
+   rep movsb
+%endmacro
+
 
 ;********* Programa principal **********
 section .text
@@ -93,9 +157,11 @@ cargarPartida:
     cmp byte[buffer], 'S'
     jne personalizar ;  Si se quiere comenzar una partida de cero, se lleva a personalizar la misma
 cargarPartidaDesdeArchivo:
+    sub  rsp, 8
     call cargarInfoArchivo
+    add rsp,8
     cmp byte[archivoCargadoCorrectamente], 'N'
-    je cargarPartida
+    je personalizar
     jmp cicloJuego
 
 personalizar:
@@ -196,7 +262,6 @@ ofrecerGuardado:
     call recibirSiNo ;Ya se ocupa de recibir un si o no en buffer
     cmp byte[buffer], 'N' ;Si el usuario no quiere guardar el progreso, el programa termina directamente
     je fin
-
     call guardarProgreso
     cmp byte[archivoGuardadoCorrectamente], 'N'
     je guardarProgreso
@@ -440,7 +505,6 @@ retornoPersonalizacion:
     ret
 personalizacion:
     ret
-
 guardarPosActualOficiales:
     ; Guarda la posición actual de los oficiales
     mov al, byte[cOficiales]
@@ -651,10 +715,67 @@ oficialNoEncerrado:
 
 ;********* Funciones de guardado/carga de partida ***********
 cargarInfoArchivo:
+
     mImprimirPuts msgCargandoArchivo
-    ret
+
+    abrirArchivoLectura:
+        mAbrirArchivo nombreArchivo, modoLectura
+        cmp rax,0
+        jle errorAperturaArchivoLectura
+        mov qword[idArchivo],rax
+
+    leerArchivo:
+
+        mLeerArchivo registroMatriz, 73, idArchivo
+
+        cmp rax, 0
+        jle cerrarArchivo
+        
+        ; Coloco en las variables originales los datos extraidos del archivo
+        mRecuperarDato 1, fichaSoldado, cSoldados
+        mRecuperarDato 1, fichaOficial, cOficiales
+        mRecuperarDato 1, jugadaActual, personajeMov
+        mRecuperarDato 10, f1A, f1
+        mRecuperarDato 10, f2A, f2
+        mRecuperarDato 10, f3A, f3
+        mRecuperarDato 10, f4A, f4
+        mRecuperarDato 10, f5A, f5
+        mRecuperarDato 10, f6A, f6
+        mRecuperarDato 10, f7A, f7
+
+        jmp leerArchivo
+
 guardarProgreso:
+
+    mImprimirPuts msgGuardadoPartida
+    ;Muevo toda la info a los registros correspondientes 
+
+   abrirArchivoEscritura:
+        mAbrirArchivo nombreArchivo, modoEscritura
+        cmp rax,0
+        jle errorAperturaArchivoEscritura
+        mov qword[idArchivo],rax
+
+    ; Coloco en los registros (a escribir) los datos de la partida actual
+    mRecuperarDato 1, cSoldados, fichaSoldado
+    mRecuperarDato 1, cOficiales, fichaOficial
+    mRecuperarDato 1, personajeMov, jugadaActual
+    mRecuperarDato 10, f1, f1A
+    mRecuperarDato 10, f2, f2A
+    mRecuperarDato 10, f3, f3A
+    mRecuperarDato 10, f4, f4A
+    mRecuperarDato 10, f5, f5A
+    mRecuperarDato 10, f6, f6A
+    mRecuperarDato 10, f7, f7A
+  
+    mEscribirArchivo registroMatriz, 73, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
+    jmp cerrarArchivo
+    
+
+cerrarArchivo:
+    mCerrarArchivo idArchivo
     ret
+
 ;********* Funciones de error **********
 errorIngreso:
     mov rdi, msgErrorIngreso
@@ -662,4 +783,13 @@ errorIngreso:
     call puts
     add rsp, 8
     mov rax, 1
+    ret
+errorAperturaArchivoLectura:
+    mImprimirPuts msgErrorCargaPartida
+    mov byte[archivoCargadoCorrectamente], "N"
+    ret
+
+errorAperturaArchivoEscritura:
+    mImprimirPuts msgErrorApertura
+    mov byte[archivoGuardadoCorrectamente], "N"
     ret
