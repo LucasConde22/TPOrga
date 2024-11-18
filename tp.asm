@@ -1,14 +1,22 @@
 global main
-extern printf, puts, gets, sscanf
+extern printf, puts, gets, fwrite, fread, fopen, fclose
 
 section .data
+    modoEscritura db "wb", 0
+    modoLectura db "rb", 0
+    nombreArchivo db "partidas.dat",0
     cSoldados db "X", 0
     cOficiales db "O", 0
     msgPersonalizar db "¿Desea personalizar la partida? (S/N): ", 0
+    msgPersonalizarSoldados db "¿Que simbolo usaran los soldados?: ", 0
+    msgPersonalizarOficiales db "¿Que simbolo usaran los oficiales?: ", 0
     msgErrorIngreso db "¡Ingreso inválido, intente nuevamente!", 0
     msgEstadoTablero db "Estado actual del tablero:", 0
     msgGanador db "El ganador es %c ¡Felicidades!",0
-    msgCargandoArchivo db "Cargando partida anterior", 0
+    msgErrorCargaPartida db "Todavia no hay una partida cargada. Por favor inicie una partida o termine", 0
+    msgErrorApertura db "Ocurrio un error al abrir un archivo", 0
+    msgCargandoArchivo db "Cargando partida anterior...", 0
+    msgGuardadoPartida db "Guardando datos de la partida....", 0
     msgPreguntaCargaArchivo db "¿Desea cargar la partida anterior? (S/N): ", 0
     msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
     msgSaludoFinal db "¡Gracias por jugar! ¡Hasta la próxima!", 0
@@ -19,13 +27,17 @@ section .data
     msgDestino db "   Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
     formato db "%hhi", 0
 
-   columnas db " | 1234567", 0
+    rojo db 0x1B, '[31m', 0
+    blanco db 0x1B, '[0m', 0
+    gris db 0x1B, '[90m', 0
+
+    columnas db " | 1234567", 0
     f1 db "1|   XXX  ", 0x0A
     f2 db "2|   XXX  ", 0x0A
     f3 db "3| XXXXXXX", 0x0A
-    f4 db "4| XXXXXXX", 0x0A
-    f5 db "5| XX   XX", 0x0A
-    f6 db "6|     O  ", 0x0A
+    f4 db "4| XXXXXXX", 0
+    f5 db "5| XX   XX", 0
+    f6 db "6|     O  ", 0
     f7 db "7|   O    ", 0
 
     ; ****** Tablero a imprimirse ********;
@@ -33,11 +45,22 @@ section .data
     f1Imp db "1|   XXX  ", 0x0A
     f2Imp db "2|   XXX  ", 0x0A
     f3Imp db "3| XXXXXXX", 0x0A
-    f4Imp db "4| XXXXXXX", 0x0A
-    f5Imp db "5| XX   XX", 0x0A
-    f6Imp db "6|     O  ", 0x0A
+    f4Imp db "4| XXXXXXX", 0
+    f5Imp db "5| XX   XX", 0
+    f6Imp db "6|     O  ", 0
     f7Imp db "7|   O    ", 0
 
+    registroMatriz:
+        fichaSoldado db ' '
+        fichaOficial db ' '
+        jugadaActual db ' '
+        f1A times 10 db ' '
+        f2A times 10 db ' '
+        f3A times 10 db ' '
+        f4A times 10 db ' '
+        f5A times 10 db ' '
+        f6A times 10 db ' '
+        f7A times 10 db ' '
 
     ; Casillas válidas: 13 14 15
     ;                   23 24 25
@@ -48,7 +71,7 @@ section .data
     ;                   73 74 75
 
     ;Variables de estado
-    rotaciones db 1
+    rotaciones db 0
     juegoTerminado db 'N'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
@@ -74,6 +97,8 @@ section .bss
     buffer resb 101
     qAux resq 1
 
+    idArchivo resq 1
+
 %macro mImprimirPrintf 2
     mov rdi, %1
     mov rsi, %2
@@ -96,6 +121,48 @@ section .bss
     add rsp, 8
 %endmacro
 
+%macro mAbrirArchivo 2 
+    mov rdi, %1
+    mov rsi, %2
+    sub rsp,8
+    call fopen
+    add rsp,8
+%endmacro
+
+%macro mCerrarArchivo 1
+    mov rdi, [%1]
+    sub rsp,8
+    call fclose
+    add rsp,8
+%endmacro
+
+%macro mLeerArchivo 3 
+    mov rdi, %1
+    mov rsi, %2
+    mov rdx,1
+    mov rcx,[%3]
+    sub rsp,8
+    call fread
+    add rsp,8
+%endmacro
+
+%macro mEscribirArchivo 3 
+    mov rdi, %1
+    mov rsi, %2
+    mov rdx,1
+    mov rcx,[%3]
+    sub rsp,8
+    call fwrite
+    add rsp,8
+%endmacro
+
+%macro mRecuperarDato 3
+   mov rcx,%1
+   mov rsi,%2
+   mov rdi,%3
+   rep movsb
+%endmacro
+
 
 ;********* Programa principal **********
 section .text
@@ -106,9 +173,11 @@ cargarPartida:
     cmp byte[buffer], 'S'
     jne personalizar ;  Si se quiere comenzar una partida de cero, se lleva a personalizar la misma
 cargarPartidaDesdeArchivo:
+    sub  rsp, 8
     call cargarInfoArchivo
+    add rsp,8
     cmp byte[archivoCargadoCorrectamente], 'N'
-    je cargarPartida
+    je personalizar
     jmp cicloJuego
 
 personalizar:
@@ -218,7 +287,6 @@ ofrecerGuardado:
     call recibirSiNo ;Ya se ocupa de recibir un si o no en buffer
     cmp byte[buffer], 'N' ;Si el usuario no quiere guardar el progreso, el programa termina directamente
     je fin
-
     call guardarProgreso
     cmp byte[archivoGuardadoCorrectamente], 'N'
     je guardarProgreso
@@ -229,35 +297,84 @@ fin:
     syscall ; Salir del programa
 
 ;*********Funciones de muestreo**********
+%macro mCambiarColor 1
+    ; Cambia el color de la terminal, macro utilizada en 'mostrarTablero'
+    push rbx
+    mImprimirPrintf %1, 0
+    pop rbx
+%endmacro
+
+%macro mImprimirFilasGrises 1
+    ; Imprime las filas grises del tablero, macro utilizada en 'mostrarTablero'
+    mov ax, [%1]
+    mov [buffer], ax
+    mov byte [buffer + 2], 0
+    sub rsp, 8
+    mImprimirPrintf buffer, 0
+    add rsp, 8
+    mCambiarColor gris
+    mImprimirPuts %1 + 2
+    mCambiarColor blanco
+%endmacro
+
 mostrarTablero:
+    ; Muestra el tablero en la terminal
     sub rsp, 16
     call pasarTableroImpresion
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnasImp
     mImprimirPuts f1Imp
     add rsp, 16
+
+    mov rbx, 0
+imprimirTableroCiclo:
+    cmp rbx, 3 ; Los primeros 3 caracteres son si o si blancos
+    jl imprimirCaracter
+
+    mov al, byte[f5Imp + rbx]
+    cmp al, [cOficiales]
+    je cambiarBlanco ; Si la celda está dentro de las 'posiciones rojas' pero es un oficial, lo imprime en blanco
+    mCambiarColor rojo ; Si no, pasa a rojo
+    jmp contImprimirCaracter
+
+cambiarBlanco:
+    mCambiarColor blanco
+    jmp contImprimirCaracter
+
+contImprimirCaracter:
+    cmp rbx, 8
+    jge imprimirCaracter
+verificarGris:
+    cmp rbx, 5
+    jl imprimirCaracter
+    mCambiarColor gris ; Las columnas entre 5 y 7 son grises, sin importar el contenido
+
+imprimirCaracter:
+    mov al, byte[f5Imp + rbx]
+    mov [buffer], al
+    mov byte [buffer + 1], 0
+    push rbx
+    mImprimirPrintf buffer, 0
+    pop rbx
+    
+    inc rbx
+    cmp rbx, 10
+    jl imprimirTableroCiclo
+
+    mImprimirPuts blanco
+    mImprimirFilasGrises f6Imp
+    mImprimirFilasGrises f7Imp
     ret
 ;*********Funciones de muestreo**********
-
+;pasarTableroImpresion pasa el contenido de la matrix interna a la matriz que se imprime por terminal, rotando a derecha
+;ese contenido
 pasarTableroImpresion:
-    mov byte[fila], 3 ; Rota la fila central
+    mov byte[fila], 1 ; Rota la fila central
     mov byte[columna], 1
-    mov r12b, 7
-    mov r13b, 3
-    call pasarSector
-    mov byte[fila], 6 ; Rota la parte de abajo
-    mov byte[columna], 3
-    mov r12b, 3
-    mov r13b, 2
-    call pasarSector
-    mov byte[fila], 1 ; Rota la parte de arriba
-    mov byte[columna], 3
-    mov r12b, 3
-    mov r13b, 2
     call pasarSector
     ret
 
-pasarSector: ; en r12b (ancho), r11b (alto)
+pasarSector: ; en r12b (ancho), r11b (alto)  
     mov r8b, byte[columna]
     mov [columnaOriginal], r8b
     mov r9b, byte[fila]
@@ -292,12 +409,12 @@ finRotarVeces:
     mov r10b, [auxCopia]
     mov byte[rbx], r10b
     inc r8b
-    cmp r8b, r12b
+    cmp r8b, 7
     jl copiarFila
 finCopiarFila:
     mov r8b, 0
     inc r9b
-    cmp r9b, r13b
+    cmp r9b, 7
     jl copiarFila
     ret
 
@@ -317,25 +434,16 @@ validarEntradaCelda:
     je errorIngreso ; Error en la entrada
 
     ; Podría hacer las conversiones antes, el manejo de errores creo que sería un poco mayor
-    mov [buffer], ah
-    mov byte [buffer + 1], 0
-    mov [columna], al ; Aprovecho para guardar el caracter de la col, porque el llamado rompe rax
-    mov rdi, buffer
-    mov rsi, formato
-    mov rdx, fila
-    sub rsp, 16 ; Por qué 16? No sé
-    call sscanf
-    add rsp, 16
+    call convertirFilaColumna
 
-    mov rax, [columna]
-    mov [buffer], al
-    mov byte [buffer + 1], 0
-    mov rdi, buffer
-    mov rsi, formato
-    mov rdx, columna
-    sub rsp, 16
-    call sscanf
-    add rsp, 16
+    mov rcx, 0
+    mov cl, [rotaciones]
+    cmp cl, 0
+    je finRotarIngreso
+rotarIngreso:
+    call rotarCoordenadasIzq
+    loop rotarIngreso
+finRotarIngreso:
 
     mov rax, 0
     ret
@@ -513,12 +621,14 @@ retornoPersonalizacion:
     ret
 personalizacion:
     ret
-
 guardarPosActualOficiales:
     ; Guarda la posición actual de los oficiales
     mov al, byte[cOficiales]
     cmp al, byte[personajeMov]
     jne gurdarPosActualOficialesFinalizo
+
+    mov dl, byte[filaDestino]
+    mov dh, byte[columnaDestino]
 
     mov al, byte[filaActual]
     mov ah, byte[columnaActual]
@@ -526,13 +636,13 @@ guardarPosActualOficiales:
     cmp bx, ax
     jne guardarPosOficial2
 
-    mov byte[posOficial1], al ; OPTIMIZAR?
-    mov byte[posOficial1 + 1], ah
+    mov byte[posOficial1], dl ; OPTIMIZAR?
+    mov byte[posOficial1 + 1], dh
     jmp gurdarPosActualOficialesFinalizo
 
 guardarPosOficial2:
-    mov byte[posOficial2], al
-    mov byte[posOficial2 + 1], ah
+    mov byte[posOficial2], dl
+    mov byte[posOficial2 + 1], dh
 
 gurdarPosActualOficialesFinalizo:
     ret
@@ -569,6 +679,14 @@ reescribirBufferAMayusculas:
 terminarReescribirBufferAMayusculas:
     ret
 
+convertirFilaColumna:
+    ; Convierte la fila y columna ingresadas a números
+    sub ah, 48
+    mov [fila], ah
+    sub al, 48
+    mov [columna], al
+    ret
+
 
 chequearJuegoTerminado:
     mov al, byte[cSoldados]
@@ -581,11 +699,17 @@ chequearJuegoTerminado:
     jmp juegoTermino
 
 chequearJuegoTerminadoSoldados:
+    ; Chequear si el juego terminó para los soldados
+    call chequearOficialesEncerrados
+    cmp rax, 0 ; Devuelve 1 si los oficiales no están encerrados, 0 si lo están
+    je juegoTermino
+
     mov cl, 5
     mov ch, 3
-cicloVerificacionTermino: ; Creo que no funciona correctamente
+cicloVerificacionTermino:
     mov byte[fila], cl
     mov byte[columna], ch
+    mov rbx, f1
     call encontrarDireccionCelda
     mov al, [rbx]
     cmp al, byte[cSoldados]
@@ -605,13 +729,169 @@ juegoTermino:
 juegoNoTermino:
     ret
 
+chequearOficialesEncerrados:
+    ; Chequea si los oficiales están encerrados
+    mov al, byte[posOficial1]
+    add al, 48 ; Lo paso a ASCII, para que funcione correctamente la función de validación
+    mov byte[buffer], al ; Fila
+    mov al, byte[posOficial1 + 1]
+    add al, 48
+    mov byte[buffer + 1], al ; Columna
+    call chequearOficialEncerrado
+    cmp rax, 1 ; Devuelve 1 si el oficial no está encerrado, 0 si lo está
+    je oficialNoEncerrado
+
+    mov al, byte[posOficial2]
+    add al, 48 ; Lo paso a ASCII
+    mov byte[buffer], al ; Fila
+    mov al, byte[posOficial2 + 1]
+    add al, 48
+    mov byte[buffer + 1], al ; Columna
+    call chequearOficialEncerrado
+    cmp rax, 1
+    je oficialNoEncerrado
+
+    mov rax, 0
+    ret
+
+%macro mAlrededorDeOficial 0 ; No sacar de acá, queda feo pero ayuda a leer el código
+    ; Chequea si hay un soldado alrededor de un oficial
+    call convertirFilaColumna
+    mov rbx, f1
+    call encontrarDireccionCelda
+    mov al, [rbx]
+    cmp al, byte[cSoldados]
+    jne oficialNoEncerrado
+%endmacro
+
+chequearOficialEncerrado: ; SABEN CÓMO ACHICAR ESTA FUNCIÓN?
+    ; Chequea si un oficial está encerrado
+    inc byte[buffer]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor1
+    mAlrededorDeOficial
+
+siguienteAlrededor1:
+    inc byte[buffer + 1]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor2
+    mAlrededorDeOficial
+    
+siguienteAlrededor2:
+    dec byte[buffer]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor3
+    mAlrededorDeOficial
+
+siguienteAlrededor3:
+    dec byte[buffer]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor4
+    mAlrededorDeOficial
+
+siguienteAlrededor4:
+    dec byte[buffer + 1]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor5
+    mAlrededorDeOficial
+
+siguienteAlrededor5:
+    dec byte[buffer + 1]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor6
+    mAlrededorDeOficial
+
+siguienteAlrededor6:
+    inc byte[buffer]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je siguienteAlrededor7
+    mAlrededorDeOficial
+
+siguienteAlrededor7:
+    inc byte[buffer]
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je oficialEstaEncerrado
+    mAlrededorDeOficial
+
+oficialEstaEncerrado:
+    mov rax, 0
+    ret
+oficialNoEncerrado:
+    mov rax, 1
+    ret
+
 
 ;********* Funciones de guardado/carga de partida ***********
 cargarInfoArchivo:
+
     mImprimirPuts msgCargandoArchivo
-    ret
+
+    abrirArchivoLectura:
+        mAbrirArchivo nombreArchivo, modoLectura
+        cmp rax,0
+        jle errorAperturaArchivoLectura
+        mov qword[idArchivo],rax
+
+    leerArchivo:
+
+        mLeerArchivo registroMatriz, 73, idArchivo
+
+        cmp rax, 0
+        jle cerrarArchivo
+        
+        ; Coloco en las variables originales los datos extraidos del archivo
+        mRecuperarDato 1, fichaSoldado, cSoldados
+        mRecuperarDato 1, fichaOficial, cOficiales
+        mRecuperarDato 1, jugadaActual, personajeMov
+        mRecuperarDato 10, f1A, f1
+        mRecuperarDato 10, f2A, f2
+        mRecuperarDato 10, f3A, f3
+        mRecuperarDato 10, f4A, f4
+        mRecuperarDato 10, f5A, f5
+        mRecuperarDato 10, f6A, f6
+        mRecuperarDato 10, f7A, f7
+
+        jmp leerArchivo
+
 guardarProgreso:
+
+    mImprimirPuts msgGuardadoPartida
+    ;Muevo toda la info a los registros correspondientes 
+
+   abrirArchivoEscritura:
+        mAbrirArchivo nombreArchivo, modoEscritura
+        cmp rax,0
+        jle errorAperturaArchivoEscritura
+        mov qword[idArchivo],rax
+
+    ; Coloco en los registros (a escribir) los datos de la partida actual
+    mRecuperarDato 1, cSoldados, fichaSoldado
+    mRecuperarDato 1, cOficiales, fichaOficial
+    mRecuperarDato 1, personajeMov, jugadaActual
+    mRecuperarDato 10, f1, f1A
+    mRecuperarDato 10, f2, f2A
+    mRecuperarDato 10, f3, f3A
+    mRecuperarDato 10, f4, f4A
+    mRecuperarDato 10, f5, f5A
+    mRecuperarDato 10, f6, f6A
+    mRecuperarDato 10, f7, f7A
+  
+    mEscribirArchivo registroMatriz, 73, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
+    jmp cerrarArchivo
+    
+
+cerrarArchivo:
+    mCerrarArchivo idArchivo
     ret
+
 ;********* Funciones de error **********
 errorIngreso:
     mov rdi, msgErrorIngreso
@@ -619,4 +899,13 @@ errorIngreso:
     call puts
     add rsp, 8
     mov rax, 1
+    ret
+errorAperturaArchivoLectura:
+    mImprimirPuts msgErrorCargaPartida
+    mov byte[archivoCargadoCorrectamente], "N"
+    ret
+
+errorAperturaArchivoEscritura:
+    mImprimirPuts msgErrorApertura
+    mov byte[archivoGuardadoCorrectamente], "N"
     ret
