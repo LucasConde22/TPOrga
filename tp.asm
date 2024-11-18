@@ -718,30 +718,25 @@ juegoTermino:
 juegoNoTermino:
     ret
 
-chequearOficialesEncerrados:
-    ; Chequea si los oficiales están encerrados
-    mov al, byte[posOficial1]
+%macro mOficialABuffer 1
+    ; Macro que chequea si un oficial está encerrado
+    mov al, byte[%1]
     add al, 48 ; Lo paso a ASCII, para que funcione correctamente la función de validación
     mov byte[buffer], al ; Fila
-    mov al, byte[posOficial1 + 1]
+    mov al, byte[%1 + 1]
     add al, 48
     mov byte[buffer + 1], al ; Columna
+
     call chequearOficialEncerrado
     cmp rax, 1 ; Devuelve 1 si el oficial no está encerrado, 0 si lo está
     je oficialNoEncerrado
+%endmacro
 
-    mov al, byte[posOficial2]
-    add al, 48 ; Lo paso a ASCII
-    mov byte[buffer], al ; Fila
-    mov al, byte[posOficial2 + 1]
-    add al, 48
-    mov byte[buffer + 1], al ; Columna
-    call chequearOficialEncerrado
-    cmp rax, 1
-    je oficialNoEncerrado
-
-    mov rax, 0
-    ret
+chequearOficialesEncerrados:
+    ; Chequea si los oficiales están encerrados
+    mOficialABuffer posOficial1
+    mOficialABuffer posOficial2
+    jmp oficialEstaEncerrado
 
 chequearAdyacente:
     ; Chequea si un adyacente es soldado o celda no válida
@@ -755,7 +750,7 @@ chequearAdyacente:
     mov al, [rbx]
     cmp al, byte[cSoldados]
     jne oficialNoEncerrado
-    
+
 siguienteAdyacente:
     jmp oficialEstaEncerrado ; Si por este lado se encuentra un soldado o la celda no pertenece al tablero
 
@@ -807,7 +802,6 @@ oficialEstaEncerrado:
 oficialNoEncerrado:
     mov rax, 1
     ret
-
 
 ;********* Funciones de guardado/carga de partida ***********
 cargarInfoArchivo:
