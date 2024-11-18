@@ -21,6 +21,7 @@ section .data
     msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
     msgSaludoFinal db "¡Gracias por jugar! ¡Hasta la próxima!", 0
     saltoLinea db 0
+    msgDebeComer db "¡Uno de sus soldados puede comer!", 0
 
     msgPedirMovimiento db "Ingrese el movimiento de %s a realizar: ", 0x0a, 0
     msgFicha db "   Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
@@ -36,8 +37,8 @@ section .data
     f2 db "2|   XXX  ", 0x0A
     f3 db "3| XXXXXXX", 0x0A
     f4 db "4| XXXXXXX", 0
-    f5 db "5| XX   XX", 0
-    f6 db "6|     O  ", 0
+    f5 db "5| X    XX", 0
+    f6 db "6|   X O  ", 0
     f7 db "7|   O    ", 0
 
     ; ****** Tablero a imprimirse ********;
@@ -46,8 +47,8 @@ section .data
     f2Imp db "2|   XXX  ", 0x0A
     f3Imp db "3| XXXXXXX", 0x0A
     f4Imp db "4| XXXXXXX", 0
-    f5Imp db "5| XX   XX", 0
-    f6Imp db "6|     O  ", 0
+    f5Imp db "5| X    XX", 0
+    f6Imp db "6|   X O  ", 0
     f7Imp db "7|   O    ", 0
 
     registroMatriz:
@@ -76,7 +77,7 @@ section .data
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
     archivoGuardadoCorrectamente db 'S'
-    personajeMov db 'X', 0
+    personajeMov db 'O', 0
     cantidadSoldados db 24
     posOficial1 db 6, 5
     posOficial2 db 7, 3
@@ -194,6 +195,11 @@ cicloJuego:
     ; Mostrar tablero
     call mostrarTablero
 
+    cmp byte[personajeMov], 'O'
+    jne noMorfa
+    call verificarSiOficialPuedeComer
+
+noMorfa:
     ; Pedir movimiento
     mImprimirPrintf msgPedirMovimiento, personajeMov
 actual:
@@ -726,7 +732,10 @@ juegoNoTermino:
     mov al, byte[%1 + 1]
     add al, 48
     mov byte[buffer + 1], al ; Columna
+%endmacro
 
+%macro mOficialEncerrado 1
+    mOficialABuffer %1
     call chequearOficialEncerrado
     cmp rax, 1 ; Devuelve 1 si el oficial no está encerrado, 0 si lo está
     je oficialNoEncerrado
@@ -734,8 +743,8 @@ juegoNoTermino:
 
 chequearOficialesEncerrados:
     ; Chequea si los oficiales están encerrados
-    mOficialABuffer posOficial1
-    mOficialABuffer posOficial2
+    mOficialEncerrado posOficial1
+    mOficialEncerrado posOficial2
     jmp oficialEstaEncerrado
 
 %macro mChequeoRepetitivoDeAdyacentes 0
@@ -771,20 +780,102 @@ oficialNoEncerrado:
 
 chequearAdyacente:
     ; Chequea si un adyacente es soldado o celda no válida
+    mov r8b, [cSoldados]
+    call chequearAdyacenteGenerico
+
+chequearAdyacenteGenerico:
+    ; Chequea si un adyacente es igual a un valor dado
     call validarEntradaCeldaInterna
     cmp rdx, 1
-    je siguienteAdyacente
+    je devolverDos
 
     call convertirFilaColumna
     mov rbx, f1
     call encontrarDireccionCelda
     mov al, [rbx]
-    cmp al, byte[cSoldados]
-    jne oficialNoEncerrado
+    cmp al, r8b
+    jne oficialNoEncerrado ; Si no es igual, no está encerrado (devuelve 1)
+    jmp oficialEstaEncerrado ; Si por este lado se encuentra lo buscado (devuelve 0)
+devolverDos: ; Si la celda no pertence al tablero
+    mov rax, 2
+    ret
 
-siguienteAdyacente:
-    jmp oficialEstaEncerrado ; Si por este lado se encuentra un soldado o la celda no pertenece al tablero
+verificarSiOficialPuedeComer:
+    mOficialABuffer posOficial1
+    call puedeComer
+    cmp rax, 0
+    je msgMorfar
 
+    mOficialABuffer posOficial2
+    call puedeComer
+    cmp rax, 0
+    je msgMorfar
+    ret
+msgMorfar:
+    mImprimirPuts msgDebeComer ; HACER ALGO ACÁ!!!!!
+    ret
+
+%macro mComerRepetitivo 0
+    call puedeComerAux
+    cmp rax, 0
+    je seLoMorfa
+%endmacro
+
+puedeComer:
+    inc byte[buffer]
+    mov r10b, 1
+    mov r11b, 0
+    mComerRepetitivo
+
+    inc byte[buffer + 1]
+    mov r11b, 1
+    mComerRepetitivo
+
+    dec byte[buffer]
+    mov r10b, 0
+    mComerRepetitivo
+
+    dec byte[buffer]
+    mov r10b, -1
+    mComerRepetitivo
+
+    dec byte[buffer + 1]
+    mov r11b, 0
+    mComerRepetitivo
+
+    dec byte[buffer + 1]
+    mov r11b, -1
+    mComerRepetitivo
+
+    inc byte[buffer]
+    mov r10b, 0
+    mComerRepetitivo
+
+    inc byte[buffer]
+    mov r10b, 1
+    mComerRepetitivo
+seLoMorfa:
+    ret
+
+puedeComerAux:
+    call chequearAdyacente
+    cmp rax, 1
+    jge noPuedeComer
+
+    add byte[buffer], r10b
+    add byte[buffer + 1], r11b
+    mov r8b, ' '
+    call chequearAdyacenteGenerico
+    cmp rax, 1
+    jge decNoPuedeComer
+    ret
+
+decNoPuedeComer:
+    sub byte[buffer], r10b
+    sub byte[buffer + 1], r11b
+noPuedeComer:
+    mov rax, 1
+    ret
 
 ;********* Funciones de guardado/carga de partida ***********
 cargarInfoArchivo:
