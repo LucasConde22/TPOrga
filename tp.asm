@@ -30,6 +30,7 @@ section .data
     rojo db 0x1B, '[31m', 0
     blanco db 0x1B, '[0m', 0
     gris db 0x1B, '[90m', 0
+
     columnas db " | 1234567", 0
     f1 db "1|   XXX  ", 0x0A
     f2 db "2|   XXX  ", 0x0A
@@ -38,6 +39,16 @@ section .data
     f5 db "5| XX   XX", 0
     f6 db "6|     O  ", 0
     f7 db "7|   O    ", 0
+
+    ; ****** Tablero a imprimirse ********;
+    columnasImp db " | 1234567", 0
+    f1Imp db "1|   XXX  ", 0x0A
+    f2Imp db "2|   XXX  ", 0x0A
+    f3Imp db "3| XXXXXXX", 0x0A
+    f4Imp db "4| XXXXXXX", 0
+    f5Imp db "5| XX   XX", 0
+    f6Imp db "6|     O  ", 0
+    f7Imp db "7|   O    ", 0
 
     registroMatriz:
         fichaSoldado db ' '
@@ -60,6 +71,7 @@ section .data
     ;                   73 74 75
 
     ;Variables de estado
+    rotaciones db 0
     juegoTerminado db 'N'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
@@ -77,6 +89,10 @@ section .bss
     columnaActual resb 1
     filaDestino resb 1
     columnaDestino resb 1
+
+    filaOriginal resb 1
+    columnaOriginal resb 1
+    auxCopia resb 1
 
     buffer resb 101
     qAux resq 1
@@ -186,11 +202,14 @@ actual:
     call validarEntradaCelda
     cmp rax, 1
     je actual ; Error en la entrada
+
+
     mov al, [fila]
     mov [filaActual], al
     mov al, [columna]
     mov [columnaActual], al
 
+    mov rbx, f1
     call encontrarDireccionCelda
     mov al, [rbx]
     cmp al, byte[personajeMov]
@@ -203,6 +222,11 @@ continuarIngresoActual: ; No me gusta mucho esta parte del código, pero no encu
 destino:
     mImprimirPrintf msgDestino, 0
     mLeer
+    mov rcx, 0
+    mov cl, byte[rotaciones]
+    cmp rcx, 0
+    je validarCelda
+validarCelda:
     call validarEntradaCelda
     cmp rax, 1
     je destino ; Error en la entrada
@@ -211,6 +235,7 @@ destino:
     mov al, [columna]
     mov [columnaDestino], al
 
+    mov rbx, f1
     call encontrarDireccionCelda
     cmp byte[rbx], ' '
     je continuarIngresoDestino
@@ -294,16 +319,20 @@ fin:
 
 mostrarTablero:
     ; Muestra el tablero en la terminal
-    mImprimirPuts msgEstadoTablero
-    mImprimirPuts columnas
-    mImprimirPuts f1
 
+    sub rsp, 16
+    call pasarTableroImpresion
+    mImprimirPuts msgEstadoTablero
+    mImprimirPuts columnasImp
+    mImprimirPuts f1Imp
+    add rsp, 16
     mov rbx, 0
 imprimirTableroCiclo:
     cmp rbx, 3 ; Los primeros 3 caracteres son si o si blancos
     jl imprimirCaracter
 
-    mov al, byte[f5 + rbx]
+    mov al, byte[f5Imp + rbx]
+
     cmp al, [cOficiales]
     je cambiarBlanco ; Si la celda está dentro de las 'posiciones rojas' pero es un oficial, lo imprime en blanco
     mCambiarColor rojo ; Si no, pasa a rojo
@@ -322,7 +351,9 @@ verificarGris:
     mCambiarColor gris ; Las columnas entre 5 y 7 son grises, sin importar el contenido
 
 imprimirCaracter:
-    mov al, byte[f5 + rbx]
+
+    mov al, byte[f5Imp + rbx]
+
     mov [buffer], al
     mov byte [buffer + 1], 0
     push rbx
@@ -334,9 +365,53 @@ imprimirCaracter:
     jl imprimirTableroCiclo
 
     mImprimirPuts blanco
-    mImprimirFilasGrises f6
-    mImprimirFilasGrises f7
+    mImprimirFilasGrises f6Imp
+    mImprimirFilasGrises f7Imp
     ret
+
+
+;pasarTableroImpresion pasa el contenido de la matrix interna a la matriz que se imprime por terminal, rotando a derecha
+;ese contenido
+pasarTableroImpresion:
+    ; Rota todo el tablero (cuadrado de 7x7)
+    mov r8b, 0
+    mov r9b, 0
+copiarFila:
+    ; Cada vez que voy a copiar un valor inicializo otra vez mis valores de referencia (la celda 11)
+    mov byte[columna], 1
+    mov byte[fila], 1
+    add [columna], r8b
+    add [fila], r9b
+
+    mov rbx, f1
+    call encontrarDireccionCelda
+    mov r10b, [rbx]
+    mov [auxCopia], r10b
+
+    mov rcx, 0
+    mov cl, byte[rotaciones]
+    cmp cl, 0
+    je finRotarVeces
+rotarVeces:
+    call rotarCoordenadasDer
+    loop rotarVeces
+finRotarVeces:
+    mov rbx, f1Imp
+    call encontrarDireccionCelda
+
+    mov r10b, [auxCopia]
+    mov byte[rbx], r10b
+    inc r8b
+    cmp r8b, 7
+    jl copiarFila
+finCopiarFila:
+    mov r8b, 0
+    inc r9b
+    cmp r9b, 7
+    jl copiarFila
+    ret
+
+
 
 validarEntradaCelda:
     ; Valida que la celda ingresada sea válida (que pertenezca al tablero):
@@ -353,6 +428,15 @@ validarEntradaCelda:
 
     ; Podría hacer las conversiones antes, el manejo de errores creo que sería un poco mayor
     call convertirFilaColumna
+
+    mov rcx, 0
+    mov cl, [rotaciones]
+    cmp cl, 0
+    je finRotarIngreso
+rotarIngreso:           ; Se rotan las coordenadas a izquierda para trabajar internamente con coordenadas "normales"
+    call rotarCoordenadasIzq
+    loop rotarIngreso
+finRotarIngreso:
 
     mov rax, 0
     ret
@@ -394,9 +478,9 @@ entradaCeldaInvalida:
     ret
 
 encontrarDireccionCelda:
+    ; en rbx está la posicion de la primera celda en memoria del tablero
     ; Ya teniendo guardada la fila y columna, busca la dirección de memoria de la celda
     ; 3 + (columna-1) + 11 * (fila-1)
-    mov rbx, f1
 
     movzx rax, byte [columna]
     dec rax
@@ -486,19 +570,44 @@ mostrarGanador:
 ;********* Funciones de validacion **********
 ; Código que escribí pelotudeando, seguramente haya que cambiarlo:
 validarEntradaPersonalizacion:
+    call reescribirBufferAMayusculas
     mov ax, [buffer]
     cmp ax, 83 ; S
-    je personalizacion
-    cmp ax, 115 ; s
     je personalizacion
 
     cmp ax, 78 ; N
     je retornoPersonalizacion
-    cmp ax, 110 ; n
-    je retornoPersonalizacion
     ret;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     call errorIngreso
     ;jmp personalizar Volver a preguntar???
+
+; ********* Funciones de rotacion **********
+rotarCoordenadasDer:
+    mov rsi, fila        ; FilNueva = ColVieja
+    mov rdi, columna          ; ColNueva = abs(FilVieja - 7) + 1
+    call rotarCoordenadas
+    ret
+rotarCoordenadasIzq:
+    mov rsi, columna        ; ColNueva = FilaVieja
+    mov rdi, fila     ; FilNueva = abs(ColVieja - 7) + 1
+    call rotarCoordenadas
+    ret
+rotarCoordenadas: ; En rsi y rdi cuentan con punteros a las dos coordenadas que se esperan
+                  ;rdi solo cambia de lugar, rsi cambia de lugar y se le hacen ciertas operaciones para eefctuar la rotación
+rotar:
+    mov al, [rsi] 
+    mov ah, [rdi]
+    mov [rsi], ah 
+    sub al, 7
+    cmp al, 0
+    jge esPositivo
+    neg al
+esPositivo:
+    add al, 1
+    mov byte[rdi], al
+    ret
+
+
 
 ;*********Funciones auxiliares**********
 retornoPersonalizacion:
@@ -539,15 +648,13 @@ recibirSiNo:
     cmp byte[buffer + 1], 0
     jne siNoInvalido
 
+    call reescribirBufferAMayusculas
+
     cmp byte[buffer], 'S'
     je recibirSiNoValido
-    cmp byte[buffer], 's'
-    je recibirSiNoValidoMin
 
     cmp byte[buffer], 'N'
     je recibirSiNoValido
-    cmp byte[buffer], 'n'
-    je recibirSiNoValidoMin
 siNoInvalido:    
     ;No es una respuesta válida, vuelvo a pedir nuevo ingreso
     mImprimirPuts msgErrorIngreso
@@ -560,7 +667,7 @@ recibirSiNoValido:
 ;Asume que hay un caracter en el buffer y si es minúscula lo pasa a mayúsculas
 reescribirBufferAMayusculas:
     cmp byte [buffer], 97
-    jl  terminarReescribirBufferAMayusculas ;Se asume ya está en may
+    jl  terminarReescribirBufferAMayusculas ;Se asume ya está en mayúsculas
     sub byte [buffer], 32
 terminarReescribirBufferAMayusculas:
     ret
@@ -595,6 +702,7 @@ chequearJuegoTerminadoSoldados:
 cicloVerificacionTermino:
     mov byte[fila], cl
     mov byte[columna], ch
+    mov rbx, f1
     call encontrarDireccionCelda
     mov al, [rbx]
     cmp al, byte[cSoldados]
@@ -642,6 +750,8 @@ chequearOficialesEncerrados:
 %macro mAlrededorDeOficial 0 ; No sacar de acá, queda feo pero ayuda a leer el código
     ; Chequea si hay un soldado alrededor de un oficial
     call convertirFilaColumna
+
+    mov rbx, f1
     call encontrarDireccionCelda
     mov al, [rbx]
     cmp al, byte[cSoldados]
