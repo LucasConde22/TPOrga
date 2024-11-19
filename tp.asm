@@ -773,8 +773,6 @@ errorEntrada:
 entradaValida:
     mov byte[entradaValidaPersonalizacion], 'S'
     ret
-finCopia:
-    ret
 guardarPosActualOficiales:
     ; Guarda la posición actual de los oficiales
     mov al, byte[cOficiales]
