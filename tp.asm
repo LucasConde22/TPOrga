@@ -21,6 +21,9 @@ section .data
     msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
     msgSaludoFinal db "¡Gracias por jugar! ¡Hasta la próxima!", 0
     saltoLinea db 0
+    msgDebeComer db "¡Cuidado, si uno de sus soldados omite una captura será retirado!", 0
+    msgPerdioOficial  db "¡Omitiste una captura, perdiste un oficial!", 0
+    msgSoldadoCapturado db "¡Soldado capturado!", 0
 
     msgPedirMovimiento db "Ingrese el movimiento de %s a realizar: ", 0x0a, 0
     msgFicha db "   Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
@@ -80,10 +83,15 @@ section .data
     cantidadSoldados db 24
     posOficial1 db 6, 5
     posOficial2 db 7, 3
+    debeCapturar db 'N'
+    oficialesVivos db 2
+    oficialEliminado db 0
 
 section .bss
     fila resb 1
     columna resb 1
+    direccionSalto resq 1 ; Dirección de celda a la que se debe saltar
+    direccionComida resq 1 ; Dirección de celda con soldado a ser eliminado
 
     filaActual resb 1
     columnaActual resb 1
@@ -196,6 +204,11 @@ cicloJuego:
 
     ; Pedir movimiento
     mImprimirPrintf msgPedirMovimiento, personajeMov
+    mov al, byte[cOficiales]
+    cmp byte[personajeMov], al
+    jne actual
+    call verificarSiOficialPuedeComer
+
 actual:
     mImprimirPrintf msgFicha, 0
     mLeer
@@ -248,6 +261,18 @@ continuarIngresoDestino:
     je actual ; No se movió a una celda dentro del rango permitido 
 
     ; Realizar movimiento:
+    cmp byte[debeCapturar], 'S'
+    jne movimientoNormal
+    cmp rbx, [direccionSalto]
+    jne omitioCaptura
+
+    ; Si se llega a este punto, se come al soldado:
+    mov rcx, [direccionComida]
+    mov byte[rcx], ' '
+    dec byte[cantidadSoldados]
+    mImprimirPuts msgSoldadoCapturado
+
+movimientoNormal:
     mov rcx, [qAux]
     mov byte[rcx], ' '
     mov al, byte[personajeMov]
@@ -271,7 +296,7 @@ cambiarAOficiales:
     mov al, byte[cOficiales]
     mov byte[personajeMov], al
 finCambio:
-
+    mov byte[debeCapturar], 'N' ; Por si se eliminó un soldado/oficial en la jugada anterior
     jmp cicloJuego
     ret
 
@@ -295,6 +320,24 @@ fin:
     mImprimirPuts msgSaludoFinal
     mov rax, 60
     syscall ; Salir del programa
+
+omitioCaptura:
+    mImprimirPuts msgPerdioOficial
+    mov rcx, [qAux]
+    mov byte[rcx], ' ' ; Se quita al oficial
+
+    dec byte[oficialesVivos]
+    cmp byte[oficialesVivos], 0
+    mov byte[juegoTerminado], 'S'
+    je  terminarJuego
+
+    mov byte[juegoTerminado], 'N'
+    mov al, byte[cSoldados]
+    mov byte[personajeMov], al
+    call chequearJuegoTerminado
+    cmp byte[juegoTerminado], 'S'
+    je  terminarJuego
+    jmp finCambio 
 
 ;*********Funciones de muestreo**********
 %macro mCambiarColor 1
@@ -490,7 +533,7 @@ encontrarDireccionCelda:
     add rbx, rax ; Finalmente, queda en rbx la dirección de memoria de la celda buscada
     ret
 
-chequearMovimientoCorrecto:
+chequearMovimientoCorrecto: ; MEJORAR FUNCIÓN USANDO MACROS
     ; Chequea si el movimiento es correcto, es decir, si el movimiento está dentro del rango de movimientos válidos
     mov al, byte[personajeMov]
     cmp al, byte[cSoldados]
@@ -532,6 +575,9 @@ chequeoColumnasMovSoldados:
 
 chequearMovimientoCorrectoOficiales:
     ; Chequea si el movimiento es correcto para los oficiales
+    cmp byte[debeCapturar], 'S'
+    je chequearMovimientoCorrectoOficialesDebeComer
+
     mov al, byte[filaDestino]
     sub al, byte[filaActual]
     cmp al, 1
@@ -544,6 +590,23 @@ chequearMovimientoCorrectoOficiales:
     cmp al, 1
     jg errorIngreso
     cmp al, -1
+    jl errorIngreso
+
+    mov rax, 0
+    ret
+chequearMovimientoCorrectoOficialesDebeComer:
+    mov al, byte[filaDestino]
+    sub al, byte[filaActual]
+    cmp al, 2
+    jg errorIngreso
+    cmp al, -2
+    jl errorIngreso
+
+    mov al, byte[columnaDestino]
+    sub al, byte[columnaActual]
+    cmp al, 2
+    jg errorIngreso
+    cmp al, -2
     jl errorIngreso
 
     mov rax, 0
@@ -684,6 +747,8 @@ chequearJuegoTerminado:
     ; Chequear si el juego terminó para los oficiales
     cmp byte[cantidadSoldados], 9 ; Si la cantidad de soldados es 9, el juego terminó
     jge juegoNoTermino
+    mov al, byte[cOficiales]
+    mov byte[fichaGanador], al
     jmp juegoTermino
 
 chequearJuegoTerminadoSoldados:
@@ -726,7 +791,10 @@ juegoNoTermino:
     mov al, byte[%1 + 1]
     add al, 48
     mov byte[buffer + 1], al ; Columna
+%endmacro
 
+%macro mOficialEncerrado 1
+    mOficialABuffer %1
     call chequearOficialEncerrado
     cmp rax, 1 ; Devuelve 1 si el oficial no está encerrado, 0 si lo está
     je oficialNoEncerrado
@@ -734,8 +802,14 @@ juegoNoTermino:
 
 chequearOficialesEncerrados:
     ; Chequea si los oficiales están encerrados
-    mOficialABuffer posOficial1
-    mOficialABuffer posOficial2
+    cmp byte[oficialEliminado], 1
+    je omitirEncierro1
+    mOficialEncerrado posOficial1
+    cmp byte[oficialEliminado], 2
+    je oficialEstaEncerrado
+
+omitirEncierro1:
+    mOficialEncerrado posOficial2
     jmp oficialEstaEncerrado
 
 %macro mChequeoRepetitivoDeAdyacentes 0
@@ -771,20 +845,108 @@ oficialNoEncerrado:
 
 chequearAdyacente:
     ; Chequea si un adyacente es soldado o celda no válida
+    mov r8b, [cSoldados]
+    call chequearAdyacenteGenerico
+
+chequearAdyacenteGenerico:
+    ; Chequea si un adyacente es igual a un valor dado
     call validarEntradaCeldaInterna
     cmp rdx, 1
-    je siguienteAdyacente
+    je devolverDos
 
     call convertirFilaColumna
     mov rbx, f1
     call encontrarDireccionCelda
     mov al, [rbx]
-    cmp al, byte[cSoldados]
-    jne oficialNoEncerrado
+    cmp al, r8b
+    jne oficialNoEncerrado ; Si no es igual, no está encerrado (devuelve 1)
+    jmp oficialEstaEncerrado ; Si por este lado se encuentra lo buscado (devuelve 0)
+devolverDos: ; Si la celda no pertence al tablero
+    mov rax, 2
+    ret
 
-siguienteAdyacente:
-    jmp oficialEstaEncerrado ; Si por este lado se encuentra un soldado o la celda no pertenece al tablero
+verificarSiOficialPuedeComer:
+    mOficialABuffer posOficial1
+    call puedeComer
+    cmp rax, 0
+    mov r13b, 1
+    je debeMorfar
 
+    mOficialABuffer posOficial2
+    call puedeComer
+    cmp rax, 0
+    mov r13b, 2
+    je debeMorfar
+    ret
+debeMorfar:
+    mImprimirPuts msgDebeComer
+    mov byte[debeCapturar], 'S'
+    mov byte[oficialEliminado], r13b
+    ret
+
+%macro mComerRepetitivo 0
+    call puedeComerAux
+    cmp rax, 0
+    je seLoMorfa
+%endmacro
+
+puedeComer:
+    inc byte[buffer]
+    mov r10b, 1
+    mov r11b, 0
+    mComerRepetitivo
+
+    inc byte[buffer + 1]
+    mov r11b, 1
+    mComerRepetitivo
+
+    dec byte[buffer]
+    mov r10b, 0
+    mComerRepetitivo
+
+    dec byte[buffer]
+    mov r10b, -1
+    mComerRepetitivo
+
+    dec byte[buffer + 1]
+    mov r11b, 0
+    mComerRepetitivo
+
+    dec byte[buffer + 1]
+    mov r11b, -1
+    mComerRepetitivo
+
+    inc byte[buffer]
+    mov r10b, 0
+    mComerRepetitivo
+
+    inc byte[buffer]
+    mov r10b, 1
+    mComerRepetitivo
+seLoMorfa:
+    ret
+
+puedeComerAux:
+    call chequearAdyacente
+    cmp rax, 1
+    jge noPuedeComer
+    mov qword[direccionComida], rbx
+
+    add byte[buffer], r10b
+    add byte[buffer + 1], r11b
+    mov r8b, ' '
+    call chequearAdyacenteGenerico
+    cmp rax, 1
+    jge decNoPuedeComer
+    mov qword[direccionSalto], rbx
+    ret
+
+decNoPuedeComer:
+    sub byte[buffer], r10b
+    sub byte[buffer + 1], r11b
+noPuedeComer:
+    mov rax, 1
+    ret
 
 ;********* Funciones de guardado/carga de partida ***********
 cargarInfoArchivo:
