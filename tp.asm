@@ -74,7 +74,7 @@ section .data
     ;                   73 74 75
 
     ;Variables de estado
-    rotaciones db 0
+    rotaciones db 1
     juegoTerminado db 'N'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
@@ -366,8 +366,10 @@ mostrarTablero:
     call pasarTableroImpresion
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnasImp
-    mImprimirPuts f1Imp
+    mImprimirPuts f1Imp ; Imprime hasta la fila 4 inclusive
     add rsp, 16
+    cmp byte[rotaciones], 0
+    jne imprimirTableroSinColores
 
     mov rbx, 0
 imprimirTableroCiclo:
@@ -407,6 +409,13 @@ imprimirCaracter:
     mImprimirPuts blanco
     mImprimirFilasGrises f6Imp
     mImprimirFilasGrises f7Imp
+    ret
+
+imprimirTableroSinColores:
+    ; Imprime las filas restantes del tablero sin realizar ningún cambio de color (para el caso de rotaciones)
+    mImprimirPuts f5Imp
+    mImprimirPuts f6Imp
+    mImprimirPuts f7Imp
     ret
 
 
