@@ -104,6 +104,8 @@ section .bss
     columna resb 1
     direccionSalto resq 1 ; Dirección de celda a la que se debe saltar
     direccionComida resq 1 ; Dirección de celda con soldado a ser eliminado
+    direccionOficial resq 1 ; Dirección de celda con oficial que debe capturar
+    potencialEliminado resb 1 ; Número de oficial que se eliminará si omite la captura
 
     filaActual resb 1
     columnaActual resb 1
@@ -293,6 +295,9 @@ continuarIngresoDestino:
     jne movimientoNormal
     cmp rbx, [direccionSalto]
     jne omitioCaptura
+    mov rcx, [direccionOficial]
+    cmp rcx, [qAux]
+    jne omitioCaptura
 
     ; Si se llega a este punto, se come al soldado:
     mov rcx, [direccionComida]
@@ -351,8 +356,10 @@ fin:
 
 omitioCaptura:
     mImprimirPuts msgPerdioOficial
-    mov rcx, [qAux]
+    mov rcx, [direccionOficial]
     mov byte[rcx], ' ' ; Se quita al oficial
+    mov r13b, byte[potencialEliminado]
+    mov byte[oficialEliminado], r13b
 
     dec byte[oficialesVivos]
     cmp byte[oficialesVivos], 0
@@ -394,8 +401,10 @@ mostrarTablero:
     call pasarTableroImpresion
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnasImp
-    mImprimirPuts f1Imp
+    mImprimirPuts f1Imp ; Imprime hasta la fila 4 inclusive
     add rsp, 16
+    cmp byte[rotaciones], 0
+    jne imprimirTableroSinColores
 
     mov rbx, 0
 imprimirTableroCiclo:
@@ -435,6 +444,13 @@ imprimirCaracter:
     mImprimirPuts blanco
     mImprimirFilasGrises f6Imp
     mImprimirFilasGrises f7Imp
+    ret
+
+imprimirTableroSinColores:
+    ; Imprime las filas restantes del tablero sin realizar ningún cambio de color (para el caso de rotaciones)
+    mImprimirPuts f5Imp
+    mImprimirPuts f6Imp
+    mImprimirPuts f7Imp
     ret
 
 
@@ -971,18 +987,26 @@ verificarSiOficialPuedeComer:
     call puedeComer
     cmp rax, 0
     mov r13b, 1
+    mov bx, [posOficial1]
     je debeMorfar
 
     mOficialABuffer posOficial2
     call puedeComer
     cmp rax, 0
     mov r13b, 2
+    mov bx, [posOficial2]
     je debeMorfar
     ret
 debeMorfar:
     mImprimirPuts msgDebeComer
     mov byte[debeCapturar], 'S'
-    mov byte[oficialEliminado], r13b
+    mov byte[potencialEliminado], r13b
+    mov byte[fila], bl
+    mov byte[columna], bh
+    mov rbx, f1
+    call encontrarDireccionCelda
+    mov qword[direccionOficial], rbx
+    mov rax, 0
     ret
 
 %macro mComerRepetitivo 0
