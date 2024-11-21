@@ -93,6 +93,7 @@ section .data
         f5A times 10 db ' '
         f6A times 10 db ' '
         f7A times 10 db ' '
+        ; GUARDAR POSICIONES DE OFICIALES?
 
     ;Variables de estado ---------
     rotaciones db 0
@@ -106,6 +107,7 @@ section .data
     posOficial1 db 6, 5
     posOficial2 db 7, 3
     debeCapturar db 'N'
+    ambosComen db 'N'
     oficialesVivos db 2
     oficialEliminado db 0
 
@@ -113,6 +115,7 @@ section .bss
     fila resb 1
     columna resb 1
     direccionSalto resq 1 ; Dirección de celda a la que se debe saltar
+    direccionSalto2 resq 1 ; Dirección de celda alternativa a la que se puede saltar si los dos oficiales pueden comer
     direccionComida resq 1 ; Dirección de celda con soldado a ser eliminado
     direccionOficial resq 1 ; Dirección de celda con oficial que debe capturar
     potencialEliminado resb 1 ; Número de oficial que se eliminará si omite la captura
@@ -322,12 +325,30 @@ continuarIngresoDestino:
     ; Realizar movimiento:
     cmp byte[debeCapturar], 'S'
     jne movimientoNormal
+    cmp byte[ambosComen], 'S'
+    je saltoDobleOpcion
     cmp rbx, [direccionSalto]
     jne omitioCaptura
     mov rcx, [direccionOficial]
     cmp rcx, [qAux]
     jne omitioCaptura
+    jmp captura
 
+saltoDobleOpcion: ; Si ambos oficiales pueden comer, se le da la opción al jugador de elegir con cuál comer
+    cmp rbx, [direccionSalto]
+    jne  segundaOpcion
+    mov rcx, [direccionOficial]
+    cmp rcx, [qAux]
+    je omitioCaptura
+    jmp captura
+segundaOpcion:
+    cmp rbx, [direccionSalto2]
+    jne omitioCaptura
+    mov rcx, [direccionOficial]
+    cmp rcx, [qAux]
+    jne omitioCaptura
+
+captura:
     ; Si se llega a este punto, se come al soldado:
     mov rcx, [direccionComida]
     mov byte[rcx], ' '
@@ -358,6 +379,7 @@ cambiarAOficiales:
     mov al, byte[cOficiales]
     mov byte[personajeMov], al
 finCambio:
+    mov byte[ambosComen], 'N' ; Por si quedó en 'S' durante la jugada anterior
     mov byte[debeCapturar], 'N' ; Por si se eliminó un soldado/oficial en la jugada anterior
     jmp cicloJuego
     ret
@@ -650,7 +672,7 @@ chequearJuegoTerminado:
     je chequearJuegoTerminadoSoldados
 
     ; Chequear si el juego terminó para los oficiales
-    cmp byte[cantidadSoldados], 9 ; Si la cantidad de soldados es 9, el juego terminó
+    cmp byte[cantidadSoldados], 9 ; Si la cantidad de soldados es < a 9, el juego terminó
     jge juegoNoTermino
     mov al, byte[cOficiales]
     mov byte[fichaGanador], al
@@ -774,18 +796,22 @@ chequearAdyacenteGenerico:
 verificarSiOficialPuedeComer:
     mOficialABuffer posOficial1
     call puedeComer
-    cmp rax, 0
     mov r13b, 1
     mov bx, [posOficial1]
-    je debeMorfar
-
-    mOficialABuffer posOficial2
-    call puedeComer
     cmp rax, 0
-    mov r13b, 2
-    mov bx, [posOficial2]
+    je debeMorfar
+    call verificarPuedeComerOf2
+    cmp rax, 0
     je debeMorfar
     ret
+
+verificarPuedeComerOf2:
+    mOficialABuffer posOficial2
+    call puedeComer
+    mov r13b, 2
+    mov bx, [posOficial2]
+    ret
+
     debeMorfar:
         mImprimirPuts msgDebeComer
         mov byte[debeCapturar], 'S'
@@ -795,6 +821,21 @@ verificarSiOficialPuedeComer:
         mov rbx, f1
         call encontrarDireccionCelda
         mov qword[direccionOficial], rbx
+        cmp r13b, 1
+        je verificarSiAmbosPuedenComer
+        ret
+
+    verificarSiAmbosPuedenComer:
+        mov rax, qword[direccionSalto]
+        mov qword[direccionSalto2], rax
+        call verificarPuedeComerOf2
+        cmp rax, 0
+        jne soloCome1
+        mov byte[ambosComen], 'S'
+        ret
+    soloCome1:
+        mov rax, qword[direccionSalto2]
+        mov qword[direccionSalto], rax
         mov rax, 0
         ret
 
