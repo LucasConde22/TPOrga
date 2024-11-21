@@ -2,6 +2,8 @@ global main
 extern printf, puts, gets, fwrite, fread, fopen, fclose
 
 section .data
+
+    ; Mensajes a imprimir ----------
     modoEscritura db "wb", 0
     modoLectura db "rb", 0
     nombreArchivo db "partidas.dat",0
@@ -39,11 +41,15 @@ section .data
     msgPedirMovimiento db "Ingrese el movimiento de %s a realizar: ", 0x0a, 0
     msgFicha db "    ● Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
     msgDestino db "    ● Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
+
+    ; Auxiliares de impresión ----------
     formato db "%hhi", 0
 
     rojo db 0x1B, '[1;31m', 0
     blanco db 0x1B, '[0m', 0
     gris db 0x1B, '[1;90m', 0
+
+    ; ****** Tablero interno ********
 
     columnas db " | 1234567", 0
     f1 db "1|   XXX  ", 0x0A
@@ -54,7 +60,7 @@ section .data
     f6 db "6|     O  ", 0
     f7 db "7|   O    ", 0
 
-    ; ****** Tablero a imprimirse ********;
+    ; ****** Tablero a imprimirse ********
     columnasImp db " | 1234567", 0
     f1Imp db "1|   XXX  ", 0x0A
     f2Imp db "2|   XXX  ", 0x0A
@@ -64,6 +70,17 @@ section .data
     f6Imp db "6|     O  ", 0
     f7Imp db "7|   O    ", 0
 
+
+    ; Casillas válidas: 13 14 15
+    ;                   23 24 25
+    ;             31 32 33 34 35 36 37
+    ;             41 42 43 44 45 46 47
+    ;             51 52 53 54 55 56 57
+    ;                   63 64 65
+    ;                   73 74 75
+
+
+    ; Auxiliares de guardado ----------
     registroMatriz:
         fichaSoldado db ' '
         fichaOficial db ' '
@@ -76,15 +93,7 @@ section .data
         f6A times 10 db ' '
         f7A times 10 db ' '
 
-    ; Casillas válidas: 13 14 15
-    ;                   23 24 25
-    ;             31 32 33 34 35 36 37
-    ;             41 42 43 44 45 46 47
-    ;             51 52 53 54 55 56 57
-    ;                   63 64 65
-    ;                   73 74 75
-
-    ;Variables de estado
+    ;Variables de estado ---------
     rotaciones db 0
     juegoTerminado db 'N'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
@@ -112,8 +121,6 @@ section .bss
     filaDestino resb 1
     columnaDestino resb 1
 
-    filaOriginal resb 1
-    columnaOriginal resb 1
     auxCopia resb 1
 
     buffer resb 101
@@ -121,6 +128,8 @@ section .bss
 
     idArchivo resq 1
 
+
+; ************ Macros ************ ;
 %macro mImprimirPrintf 2
     mov rdi, %1
     mov rsi, %2
@@ -201,6 +210,25 @@ section .bss
    repe cmpsb
 %endmacro
 
+%macro mCambiarColor 1
+    ; Cambia el color de la terminal, macro utilizada en 'mostrarTablero'
+    push rbx
+    mImprimirPrintf %1, 0
+    pop rbx
+%endmacro
+
+%macro mImprimirFilasGrises 1
+    ; Imprime las filas grises del tablero, macro utilizada en 'mostrarTablero'
+    mov ax, [%1]
+    mov [buffer], ax
+    mov byte [buffer + 2], 0
+    sub rsp, 8
+    mImprimirPrintf buffer, 0
+    add rsp, 8
+    mCambiarColor gris
+    mImprimirPuts %1 + 2
+    mCambiarColor blanco
+%endmacro
 
 ;********* Programa principal **********
 section .text
@@ -375,26 +403,6 @@ omitioCaptura:
     jmp finCambio 
 
 ;*********Funciones de muestreo**********
-%macro mCambiarColor 1
-    ; Cambia el color de la terminal, macro utilizada en 'mostrarTablero'
-    push rbx
-    mImprimirPrintf %1, 0
-    pop rbx
-%endmacro
-
-%macro mImprimirFilasGrises 1
-    ; Imprime las filas grises del tablero, macro utilizada en 'mostrarTablero'
-    mov ax, [%1]
-    mov [buffer], ax
-    mov byte [buffer + 2], 0
-    sub rsp, 8
-    mImprimirPrintf buffer, 0
-    add rsp, 8
-    mCambiarColor gris
-    mImprimirPuts %1 + 2
-    mCambiarColor blanco
-%endmacro
-
 mostrarTablero:
     ; Muestra el tablero en la terminal
     sub rsp, 16
@@ -476,9 +484,9 @@ copiarFila:
     mov cl, byte[rotaciones]
     cmp cl, 0
     je finRotarVeces
-rotarVeces:
-    call rotarCoordenadasDer
-    loop rotarVeces
+    rotarVeces:
+        call rotarCoordenadasDer
+        loop rotarVeces
 finRotarVeces:
     mov rbx, f1Imp
     call encontrarDireccionCelda
@@ -498,7 +506,7 @@ finCopiarFila:
 
 validarEntradaCelda:
     ; Valida que la celda ingresada sea válida (que pertenezca al tablero):
-    call reescribirBufferAMayusculas ; Si se ingresa 'q', se termina el juego
+    call reescribirBufferAMayusculas ; Si se ingresa 'q' o 'Q', se termina el juego
     cmp byte [buffer], 'Q' 
     je terminarJuego
 
@@ -516,49 +524,27 @@ validarEntradaCelda:
     mov cl, [rotaciones]
     cmp cl, 0
     je finRotarIngreso
-rotarIngreso:           ; Se rotan las coordenadas a izquierda para trabajar internamente con coordenadas "normales"
-    call rotarCoordenadasIzq
-    loop rotarIngreso
+    rotarIngreso:           ; Se rotan las coordenadas a izquierda para trabajar internamente con coordenadas "normales"
+        call rotarCoordenadasIzq
+        loop rotarIngreso
 finRotarIngreso:
     mov rax, 0
     ret
 
-validarEntradaCeldaInterna:
-    mov ah, [buffer] ; Fila
-    mov al, [buffer + 1] ; Columna
 
-    mov dh, '3' ; Col 3
-    mov dl, '5' ; Col 5
-    cmp ah, '1' ; Fila 1
-    je validarEntradaCeldaCol
-    jl entradaCeldaInvalida ; Fila < 1, error
-    cmp ah, '2' ; Fila 2
-    je validarEntradaCeldaCol
-    cmp ah, '6' ; Fila 6
-    je validarEntradaCeldaCol
-    cmp ah, '7' ; Fila 7
-    je validarEntradaCeldaCol
-    jg entradaCeldaInvalida ; Fila > 7, error
+mostrarGanador:
+    mov rdi, msgGanador
+    mov rsi, [fichaGanador]
+    sub rsp, 8
+    call printf
+    add rsp, 8
 
-    mov dh, '1' ; Col 1
-    mov dl, '7' ; Col 7
-    cmp ah, '3' ; Fila 3
-    je validarEntradaCeldaCol
-    cmp ah, '4' ; Fila 4
-    je validarEntradaCeldaCol
+    sub rsp, 8
+    mov rdi, saltoLinea
+    call puts
+    add rsp, 8
 
-validarEntradaCeldaCol:
-    cmp al, dh
-    jl entradaCeldaInvalida
-    cmp al, dl
-    jg entradaCeldaInvalida
-    
-    mov rdx, 0
-    ret
-entradaCeldaInvalida:
-    mov rdx, 1
-    ret
-
+;********* Funciones de movimiento y chequeo de movimiento **********
 encontrarDireccionCelda:
     ; en rbx está la posicion de la primera celda en memoria del tablero
     ; Ya teniendo guardada la fila y columna, busca la dirección de memoria de la celda
@@ -654,205 +640,6 @@ chequearMovimientoCorrectoOficialesDebeComer:
     jl errorIngreso
 
     mov rax, 0
-    ret
-
-mostrarGanador:
-    mov rdi, msgGanador
-    mov rsi, [fichaGanador]
-    sub rsp, 8
-    call printf
-    add rsp, 8
-
-    sub rsp, 8
-    mov rdi, saltoLinea
-    call puts
-    add rsp, 8
-
-
-;********* Funciones de validacion **********
-; Código que escribí pelotudeando, seguramente haya que cambiarlo:
-validarEntradaPersonalizacion:
-    call reescribirBufferAMayusculas
-    mov ax, [buffer]
-    cmp ax, 83 ; S
-    je personalizacion
-
-    cmp ax, 78 ; N
-    je retornoPersonalizacion
-    ret;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    call errorIngreso
-    ;jmp personalizar Volver a preguntar???
-
-; ********* Funciones de rotacion **********
-rotarCoordenadasDer:
-    mov rsi, fila        ; FilNueva = ColVieja
-    mov rdi, columna          ; ColNueva = abs(FilVieja - 7) + 1
-    call rotarCoordenadas
-    ret
-rotarCoordenadasIzq:
-    mov rsi, columna        ; ColNueva = FilaVieja
-    mov rdi, fila     ; FilNueva = abs(ColVieja - 7) + 1
-    call rotarCoordenadas
-    ret
-rotarCoordenadas: ; En rsi y rdi cuentan con punteros a las dos coordenadas que se esperan
-                  ;rdi solo cambia de lugar, rsi cambia de lugar y se le hacen ciertas operaciones para eefctuar la rotación
-rotar:
-    mov al, [rsi] 
-    mov ah, [rdi]
-    mov [rsi], ah 
-    sub al, 7
-    cmp al, 0
-    jge esPositivo
-    neg al
-esPositivo:
-    add al, 1
-    mov byte[rdi], al
-    ret
-
-
-
-;*********Funciones auxiliares**********
-retornoPersonalizacion:
-    ret
-personalizacion:
-    elegirFichas:
-        soldado:
-            mImprimirPrintfModificado msgPersonalizarSoldados, 0, 0
-            mLeer
-            call validarEntradaFicha
-            cmp byte[entradaValidaPersonalizacion], "N"
-            je soldado
-            mRecuperarDato 1, buffer, cSoldados
-        oficial:
-            mImprimirPrintfModificado msgPersonalizarOficiales, 0, 0
-            mLeer
-            call validarEntradaFicha
-            cmp byte[entradaValidaPersonalizacion], "N"
-            je oficial
-            mRecuperarDato 1, buffer, cOficiales
-    elegirJugador:
-        mImprimirPrintfModificado msgPrimeraJugada, cSoldados, cOficiales
-        mLeer
-        cmp byte[buffer], "Q"
-        je fin
-        call validarEntradaJugador
-        cmp byte[entradaValidaPersonalizacion], "N"
-        je elegirJugador
-        mRecuperarDato 1, buffer, personajeMov
-    rotacion:
-        mImprimirPuts msgRotacion
-        mImprimirPuts sinRotacion
-        mImprimirPuts derecha
-        mImprimirPuts arriba
-        mImprimirPuts izquierda
-        ingresoComando:
-        mImprimirPrintfModificado msgIngresoComando, 0, 0
-        mLeer
-        cmp byte[buffer], "Q"
-        je fin
-
-        call validarEntradaRotacion
-        cmp byte[entradaValidaPersonalizacion], "N"
-        je ingresoComando
-
-    realizarRotacion:
-        mov al, byte[buffer]
-        sub al, '0'
-        mov byte[rotaciones], al
-    ret
-validarEntradaJugador:
-    cmp byte[buffer + 1], 0
-    jne errorEntrada
-    mComparar 1, buffer, cSoldados 
-    je entradaValida
-
-    mComparar 1, buffer, cOficiales 
-    je entradaValida
-
-    jmp errorEntrada
-
-validarEntradaRotacion:
-    cmp byte[buffer + 1], 0
-    jne errorEntrada
-    cmp byte[buffer], '0'
-    jl  errorEntrada
-    cmp byte[buffer], '3'
-    jg  errorEntrada
-    jmp entradaValida
-
-validarEntradaFicha:
-    ret
-errorEntrada:
-    mImprimirPuts msgErrorIngreso
-    mov byte[entradaValidaPersonalizacion], 'N'
-    ret
-entradaValida:
-    mov byte[entradaValidaPersonalizacion], 'S'
-    ret
-guardarPosActualOficiales:
-    ; Guarda la posición actual de los oficiales
-    mov al, byte[cOficiales]
-    cmp al, byte[personajeMov]
-    jne gurdarPosActualOficialesFinalizo
-
-    mov dl, byte[filaDestino]
-    mov dh, byte[columnaDestino]
-
-    mov al, byte[filaActual]
-    mov ah, byte[columnaActual]
-    mov bx, word[posOficial1]
-    cmp bx, ax
-    jne guardarPosOficial2
-
-    mov byte[posOficial1], dl ; OPTIMIZAR?
-    mov byte[posOficial1 + 1], dh
-    jmp gurdarPosActualOficialesFinalizo
-
-guardarPosOficial2:
-    mov byte[posOficial2], dl
-    mov byte[posOficial2 + 1], dh
-
-gurdarPosActualOficialesFinalizo:
-    ret
-
-
-;La funcion pide al usuario que ingrese una respuesta valida (S/s/N/n) hasta que lo hace. Si
-;el usuario ingresa minusculas se encarga de pasarlo a mayusculas
-recibirSiNo:  
-    mLeer
-    cmp byte[buffer + 1], 0
-    jne siNoInvalido
-
-    call reescribirBufferAMayusculas
-
-    cmp byte[buffer], 'S'
-    je recibirSiNoValido
-
-    cmp byte[buffer], 'N'
-    je recibirSiNoValido
-siNoInvalido:    
-    ;No es una respuesta válida, vuelvo a pedir nuevo ingreso
-    mImprimirPuts msgErrorIngreso
-    jmp recibirSiNo
-recibirSiNoValidoMin:
-    call reescribirBufferAMayusculas
-recibirSiNoValido:
-    ret
-
-;Asume que hay un caracter en el buffer y si es minúscula lo pasa a mayúsculas
-reescribirBufferAMayusculas:
-    cmp byte [buffer], 97
-    jl  terminarReescribirBufferAMayusculas ;Se asume ya está en mayúsculas
-    sub byte [buffer], 32
-terminarReescribirBufferAMayusculas:
-    ret
-
-convertirFilaColumna:
-    ; Convierte la fila y columna ingresadas a números
-    sub ah, 48
-    mov [fila], ah
-    sub al, 48
-    mov [columna], al
     ret
 
 
@@ -953,12 +740,13 @@ chequearOficialEncerrado:
     mChequeoRepetitivoDeAdyacentes
     inc byte[buffer]
     mChequeoRepetitivoDeAdyacentes
-oficialEstaEncerrado:
-    mov rax, 0
-    ret
-oficialNoEncerrado:
-    mov rax, 1
-    ret
+
+    oficialEstaEncerrado:
+        mov rax, 0
+        ret
+    oficialNoEncerrado:
+        mov rax, 1
+        ret
 
 chequearAdyacente:
     ; Chequea si un adyacente es soldado o celda no válida
@@ -978,9 +766,9 @@ chequearAdyacenteGenerico:
     cmp al, r8b
     jne oficialNoEncerrado ; Si no es igual, no está encerrado (devuelve 1)
     jmp oficialEstaEncerrado ; Si por este lado se encuentra lo buscado (devuelve 0)
-devolverDos: ; Si la celda no pertence al tablero
-    mov rax, 2
-    ret
+    devolverDos: ; Si la celda no pertence al tablero
+        mov rax, 2
+        ret
 
 verificarSiOficialPuedeComer:
     mOficialABuffer posOficial1
@@ -997,17 +785,17 @@ verificarSiOficialPuedeComer:
     mov bx, [posOficial2]
     je debeMorfar
     ret
-debeMorfar:
-    mImprimirPuts msgDebeComer
-    mov byte[debeCapturar], 'S'
-    mov byte[potencialEliminado], r13b
-    mov byte[fila], bl
-    mov byte[columna], bh
-    mov rbx, f1
-    call encontrarDireccionCelda
-    mov qword[direccionOficial], rbx
-    mov rax, 0
-    ret
+    debeMorfar:
+        mImprimirPuts msgDebeComer
+        mov byte[debeCapturar], 'S'
+        mov byte[potencialEliminado], r13b
+        mov byte[fila], bl
+        mov byte[columna], bh
+        mov rbx, f1
+        call encontrarDireccionCelda
+        mov qword[direccionOficial], rbx
+        mov rax, 0
+        ret
 
 %macro mComerRepetitivo 0
     call puedeComerAux
@@ -1048,8 +836,9 @@ puedeComer:
     inc byte[buffer]
     mov r10b, 1
     mComerRepetitivo
-seLoMorfa:
-    ret
+
+    seLoMorfa:
+        ret
 
 puedeComerAux:
     call chequearAdyacente
@@ -1066,12 +855,240 @@ puedeComerAux:
     mov qword[direccionSalto], rbx
     ret
 
-decNoPuedeComer:
-    sub byte[buffer], r10b
-    sub byte[buffer + 1], r11b
-noPuedeComer:
-    mov rax, 1
+    decNoPuedeComer:
+        sub byte[buffer], r10b
+        sub byte[buffer + 1], r11b
+    noPuedeComer:
+        mov rax, 1
+        ret
+
+;********* Funciones de validacion **********
+; Código que escribí pelotudeando, seguramente haya que cambiarlo:
+validarEntradaPersonalizacion:
+    call reescribirBufferAMayusculas
+    mov ax, [buffer]
+    cmp ax, 83 ; S
+    je personalizacion
+
+    cmp ax, 78 ; N
+    je retornoPersonalizacion
+    ret;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    call errorIngreso
+    ;jmp personalizar Volver a preguntar???
+
+    validarEntradaCeldaInterna:
+        mov ah, [buffer] ; Fila
+        mov al, [buffer + 1] ; Columna
+
+        mov dh, '3' ; Col 3
+        mov dl, '5' ; Col 5
+        cmp ah, '1' ; Fila 1
+        je validarEntradaCeldaCol
+        jl entradaCeldaInvalida ; Fila < 1, error
+        cmp ah, '2' ; Fila 2
+        je validarEntradaCeldaCol
+        cmp ah, '6' ; Fila 6
+        je validarEntradaCeldaCol
+        cmp ah, '7' ; Fila 7
+        je validarEntradaCeldaCol
+        jg entradaCeldaInvalida ; Fila > 7, error
+
+        mov dh, '1' ; Col 1
+        mov dl, '7' ; Col 7
+        cmp ah, '3' ; Fila 3
+        je validarEntradaCeldaCol
+        cmp ah, '4' ; Fila 4
+        je validarEntradaCeldaCol
+
+        validarEntradaCeldaCol:
+            cmp al, dh
+            jl entradaCeldaInvalida
+            cmp al, dl
+            jg entradaCeldaInvalida
+            
+            mov rdx, 0
+            ret
+        entradaCeldaInvalida:
+            mov rdx, 1
+            ret
+
+
+; ********* Funciones de rotacion **********
+rotarCoordenadasDer:
+    mov rsi, fila        ; FilNueva = ColVieja
+    mov rdi, columna          ; ColNueva = abs(FilVieja - 7) + 1
+    call rotarCoordenadas
     ret
+rotarCoordenadasIzq:
+    mov rsi, columna        ; ColNueva = FilaVieja
+    mov rdi, fila     ; FilNueva = abs(ColVieja - 7) + 1
+    call rotarCoordenadas
+    ret
+rotarCoordenadas: ; En rsi y rdi cuentan con "punteros" a las dos coordenadas que se esperan
+                  ;rdi solo cambia de lugar, rsi cambia de lugar y se le hacen ciertas operaciones para eefctuar la rotación
+    rotar:
+        mov al, [rsi] 
+        mov ah, [rdi]
+        mov [rsi], ah 
+        sub al, 7
+        cmp al, 0
+        jge esPositivo
+        neg al
+    esPositivo:
+        add al, 1
+        mov byte[rdi], al
+        ret
+
+
+
+;********* Funciones de personalización **********
+retornoPersonalizacion:
+    ret
+personalizacion:
+    ; elegirFichas:
+    ;     soldado:
+    ;         mImprimirPrintfModificado msgPersonalizarSoldados, 0, 0
+    ;         mLeer
+    ;         call validarEntradaFicha
+    ;         cmp byte[entradaValidaPersonalizacion], "N"
+    ;         je soldado
+    ;         mRecuperarDato 1, buffer, cSoldados
+    ;     oficial:
+    ;         mImprimirPrintfModificado msgPersonalizarOficiales, 0, 0
+    ;         mLeer
+    ;         call validarEntradaFicha
+    ;         cmp byte[entradaValidaPersonalizacion], "N"
+    ;         je oficial
+    ;         mRecuperarDato 1, buffer, cOficiales
+    elegirJugador:
+        mImprimirPrintfModificado msgPrimeraJugada, cSoldados, cOficiales
+        mLeer
+        cmp byte[buffer], "Q"
+        je fin
+        call validarEntradaJugador
+        cmp byte[entradaValidaPersonalizacion], "N"
+        je elegirJugador
+        mRecuperarDato 1, buffer, personajeMov
+    rotacion:
+        mImprimirPuts msgRotacion
+        mImprimirPuts sinRotacion
+        mImprimirPuts derecha
+        mImprimirPuts arriba
+        mImprimirPuts izquierda
+        ingresoComando:
+        mImprimirPrintfModificado msgIngresoComando, 0, 0
+        mLeer
+        cmp byte[buffer], "Q"
+        je fin
+
+        call validarEntradaRotacion
+        cmp byte[entradaValidaPersonalizacion], "N"
+        je ingresoComando
+
+    realizarRotacion:
+        mov al, byte[buffer]
+        sub al, '0'
+        mov byte[rotaciones], al
+    ret
+validarEntradaJugador:
+    cmp byte[buffer + 1], 0
+    jne errorEntrada
+    mComparar 1, buffer, cSoldados 
+    je entradaValida
+
+    mComparar 1, buffer, cOficiales 
+    je entradaValida
+
+    jmp errorEntrada
+
+validarEntradaRotacion:
+    cmp byte[buffer + 1], 0
+    jne errorEntrada
+    cmp byte[buffer], '0'
+    jl  errorEntrada
+    cmp byte[buffer], '3'
+    jg  errorEntrada
+    jmp entradaValida
+
+validarEntradaFicha:
+    ret
+errorEntrada:
+    mImprimirPuts msgErrorIngreso
+    mov byte[entradaValidaPersonalizacion], 'N'
+    ret
+entradaValida:
+    mov byte[entradaValidaPersonalizacion], 'S'
+    ret
+
+
+
+;********* Funciones auxiliares **********
+guardarPosActualOficiales:
+    ; Guarda la posición actual de los oficiales
+    mov al, byte[cOficiales]
+    cmp al, byte[personajeMov]
+    jne gurdarPosActualOficialesFinalizo
+
+    mov dl, byte[filaDestino]
+    mov dh, byte[columnaDestino]
+
+    mov al, byte[filaActual]
+    mov ah, byte[columnaActual]
+    mov bx, word[posOficial1]
+    cmp bx, ax
+    jne guardarPosOficial2
+
+    mov byte[posOficial1], dl ; OPTIMIZAR?
+    mov byte[posOficial1 + 1], dh
+    jmp gurdarPosActualOficialesFinalizo
+
+    guardarPosOficial2:
+        mov byte[posOficial2], dl
+        mov byte[posOficial2 + 1], dh
+
+    gurdarPosActualOficialesFinalizo:
+        ret
+
+
+
+recibirSiNo:  
+    ;La funcion pide al usuario que ingrese una respuesta valida (S/s/N/n) hasta que lo hace. Si
+    ;el usuario ingresa minusculas se encarga de pasarlo a mayusculas
+    mLeer
+    cmp byte[buffer + 1], 0
+    jne siNoInvalido
+
+    call reescribirBufferAMayusculas
+
+    cmp byte[buffer], 'S'
+    je recibirSiNoValido
+
+    cmp byte[buffer], 'N'
+    je recibirSiNoValido
+    siNoInvalido:    
+    ;No es una respuesta válida, vuelvo a pedir nuevo ingreso
+    mImprimirPuts msgErrorIngreso
+    jmp recibirSiNo
+
+    recibirSiNoValido:
+        ret
+
+reescribirBufferAMayusculas:
+    ;Asume que hay un caracter en el buffer y si es minúscula lo pasa a mayúsculas
+    cmp byte [buffer], 97
+    jl  terminarReescribirBufferAMayusculas ;Se asume ya está en mayúsculas
+    sub byte [buffer], 32
+    terminarReescribirBufferAMayusculas:
+        ret
+
+convertirFilaColumna:
+    ; Convierte la fila y columna ingresadas a números
+    sub ah, 48
+    mov [fila], ah
+    sub al, 48
+    mov [columna], al
+    ret
+
 
 ;********* Funciones de guardado/carga de partida ***********
 cargarInfoArchivo:
