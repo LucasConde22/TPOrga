@@ -85,6 +85,7 @@ section .data
         fichaSoldado db ' '
         fichaOficial db ' '
         jugadaActual db ' '
+        rotacionesArchivo db ' '
         f1A times 10 db ' '
         f2A times 10 db ' '
         f3A times 10 db ' '
@@ -1112,6 +1113,7 @@ cargarInfoArchivo:
         mRecuperarDato 1, fichaSoldado, cSoldados
         mRecuperarDato 1, fichaOficial, cOficiales
         mRecuperarDato 1, jugadaActual, personajeMov
+        mRecuperarDato 1, rotacionesArchivo, rotaciones
         mRecuperarDato 10, f1A, f1
         mRecuperarDato 10, f2A, f2
         mRecuperarDato 10, f3A, f3
@@ -1137,6 +1139,7 @@ guardarProgreso:
     mRecuperarDato 1, cSoldados, fichaSoldado
     mRecuperarDato 1, cOficiales, fichaOficial
     mRecuperarDato 1, personajeMov, jugadaActual
+    mRecuperarDato 1, rotaciones, rotacionesArchivo
     mRecuperarDato 10, f1, f1A
     mRecuperarDato 10, f2, f2A
     mRecuperarDato 10, f3, f3A
