@@ -8,9 +8,20 @@ section .data
     cSoldados db "X", 0
     cOficiales db "O", 0
     msgPersonalizar db "¿Desea personalizar la partida? (S/N): ", 0
-    msgPersonalizarSoldados db "¿Que simbolo usaran los soldados?: ", 0
-    msgPersonalizarOficiales db "¿Que simbolo usaran los oficiales?: ", 0
-    msgErrorIngreso db "¡Ingreso inválido, intente nuevamente!", 0
+    msgPersonalizarSoldados db "    ● ¿Que simbolo usaran los soldados?: ", 0
+    msgPersonalizarOficiales db "    ● ¿Que simbolo usaran los oficiales?: ", 0
+    msgPrimeraJugada db "    ● ¿Quien quiere que comience la partida %s o %s ?: ", 0
+
+    msgRotacion db "    ● Ingrese un comando para rotar el tablero", 0
+    msgIngresoComando db "    > ", 0
+
+    comandosRotacion:
+        sinRotacion db "      0 - Sin rotacion", 0
+        derecha db "      1 - Rotar a derecha", 0
+        arriba db "      2 - Rotar arriba", 0
+        izquierda db "      3 - Rotar a izquierda", 0
+
+    msgErrorIngreso db "    ¡Ingreso inválido, intente nuevamente!", 0
     msgEstadoTablero db "Estado actual del tablero:", 0
     msgGanador db "El ganador es %c ¡Felicidades!",0
     msgErrorCargaPartida db "Todavia no hay una partida cargada. Por favor inicie una partida o termine", 0
@@ -26,8 +37,8 @@ section .data
     msgSoldadoCapturado db "¡Soldado capturado!", 0
 
     msgPedirMovimiento db "Ingrese el movimiento de %s a realizar: ", 0x0a, 0
-    msgFicha db "   Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
-    msgDestino db "   Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
+    msgFicha db "    ● Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
+    msgDestino db "    ● Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
     formato db "%hhi", 0
 
     rojo db 0x1B, '[1;31m', 0
@@ -79,7 +90,8 @@ section .data
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
     archivoGuardadoCorrectamente db 'S'
-    personajeMov db 'O', 0
+    entradaValidaPersonalizacion db 'S'
+    personajeMov db 'X', 0
     cantidadSoldados db 24
     posOficial1 db 6, 5
     posOficial2 db 7, 3
@@ -92,8 +104,6 @@ section .bss
     columna resb 1
     direccionSalto resq 1 ; Dirección de celda a la que se debe saltar
     direccionComida resq 1 ; Dirección de celda con soldado a ser eliminado
-    direccionOficial resq 1 ; Dirección de celda con oficial que debe capturar
-    potencialEliminado resb 1 ; Número de oficial que se eliminará si omite la captura
 
     filaActual resb 1
     columnaActual resb 1
@@ -115,6 +125,15 @@ section .bss
     sub rsp, 8
     call printf
     add rsp, 8
+%endmacro
+
+%macro mImprimirPrintfModificado 3
+    mov rdi, %1
+    mov rsi, %2
+    mov rdx, %3
+    sub rsp, 16
+    call printf
+    add rsp, 16
 %endmacro
 
 %macro mImprimirPuts 1
@@ -171,6 +190,13 @@ section .bss
    mov rsi,%2
    mov rdi,%3
    rep movsb
+%endmacro
+
+%macro mComparar 3
+   mov rcx,%1
+   lea rsi,[%2]
+   lea rdi,[%3]
+   repe cmpsb
 %endmacro
 
 
@@ -267,9 +293,6 @@ continuarIngresoDestino:
     jne movimientoNormal
     cmp rbx, [direccionSalto]
     jne omitioCaptura
-    mov rcx, [direccionOficial]
-    cmp rcx, [qAux]
-    jne omitioCaptura
 
     ; Si se llega a este punto, se come al soldado:
     mov rcx, [direccionComida]
@@ -313,7 +336,7 @@ terminarJuego:
     add rsp, 8 
     jmp fin
 ofrecerGuardado:
-    mImprimirPuts msgPreguntaGuardadoArchivo
+    mImprimirPrintfModificado msgPreguntaGuardadoArchivo, 0, 0
     call recibirSiNo ;Ya se ocupa de recibir un si o no en buffer
     cmp byte[buffer], 'N' ;Si el usuario no quiere guardar el progreso, el programa termina directamente
     je fin
@@ -328,10 +351,8 @@ fin:
 
 omitioCaptura:
     mImprimirPuts msgPerdioOficial
-    mov rcx, [direccionOficial]
+    mov rcx, [qAux]
     mov byte[rcx], ' ' ; Se quita al oficial
-    mov r13b, byte[potencialEliminado]
-    mov byte[oficialEliminado], r13b
 
     dec byte[oficialesVivos]
     cmp byte[oficialesVivos], 0
@@ -373,10 +394,8 @@ mostrarTablero:
     call pasarTableroImpresion
     mImprimirPuts msgEstadoTablero
     mImprimirPuts columnasImp
-    mImprimirPuts f1Imp ; Imprime hasta la fila 4 inclusive
+    mImprimirPuts f1Imp
     add rsp, 16
-    cmp byte[rotaciones], 0
-    jne imprimirTableroSinColores
 
     mov rbx, 0
 imprimirTableroCiclo:
@@ -416,13 +435,6 @@ imprimirCaracter:
     mImprimirPuts blanco
     mImprimirFilasGrises f6Imp
     mImprimirFilasGrises f7Imp
-    ret
-
-imprimirTableroSinColores:
-    ; Imprime las filas restantes del tablero sin realizar ningún cambio de color (para el caso de rotaciones)
-    mImprimirPuts f5Imp
-    mImprimirPuts f6Imp
-    mImprimirPuts f7Imp
     ret
 
 
@@ -687,6 +699,79 @@ esPositivo:
 retornoPersonalizacion:
     ret
 personalizacion:
+    elegirFichas:
+        soldado:
+            mImprimirPrintfModificado msgPersonalizarSoldados, 0, 0
+            mLeer
+            call validarEntradaFicha
+            cmp byte[entradaValidaPersonalizacion], "N"
+            je soldado
+            mRecuperarDato 1, buffer, cSoldados
+        oficial:
+            mImprimirPrintfModificado msgPersonalizarOficiales, 0, 0
+            mLeer
+            call validarEntradaFicha
+            cmp byte[entradaValidaPersonalizacion], "N"
+            je oficial
+            mRecuperarDato 1, buffer, cOficiales
+    elegirJugador:
+        mImprimirPrintfModificado msgPrimeraJugada, cSoldados, cOficiales
+        mLeer
+        cmp byte[buffer], "Q"
+        je fin
+        call validarEntradaJugador
+        cmp byte[entradaValidaPersonalizacion], "N"
+        je elegirJugador
+        mRecuperarDato 1, buffer, personajeMov
+    rotacion:
+        mImprimirPuts msgRotacion
+        mImprimirPuts sinRotacion
+        mImprimirPuts derecha
+        mImprimirPuts arriba
+        mImprimirPuts izquierda
+        ingresoComando:
+        mImprimirPrintfModificado msgIngresoComando, 0, 0
+        mLeer
+        cmp byte[buffer], "Q"
+        je fin
+
+        call validarEntradaRotacion
+        cmp byte[entradaValidaPersonalizacion], "N"
+        je ingresoComando
+
+    realizarRotacion:
+        mov al, byte[buffer]
+        sub al, '0'
+        mov byte[rotaciones], al
+    ret
+validarEntradaJugador:
+    cmp byte[buffer + 1], 0
+    jne errorEntrada
+    mComparar 1, buffer, cSoldados 
+    je entradaValida
+
+    mComparar 1, buffer, cOficiales 
+    je entradaValida
+
+    jmp errorEntrada
+
+validarEntradaRotacion:
+    cmp byte[buffer + 1], 0
+    jne errorEntrada
+    cmp byte[buffer], '0'
+    jl  errorEntrada
+    cmp byte[buffer], '3'
+    jg  errorEntrada
+    jmp entradaValida
+
+validarEntradaFicha:
+    ret
+errorEntrada:
+    mImprimirPuts msgErrorIngreso
+    mov byte[entradaValidaPersonalizacion], 'N'
+    ret
+entradaValida:
+    mov byte[entradaValidaPersonalizacion], 'S'
     ret
 guardarPosActualOficiales:
     ; Guarda la posición actual de los oficiales
@@ -886,26 +971,18 @@ verificarSiOficialPuedeComer:
     call puedeComer
     cmp rax, 0
     mov r13b, 1
-    mov bx, [posOficial1]
     je debeMorfar
 
     mOficialABuffer posOficial2
     call puedeComer
     cmp rax, 0
     mov r13b, 2
-    mov bx, [posOficial2]
     je debeMorfar
     ret
 debeMorfar:
     mImprimirPuts msgDebeComer
     mov byte[debeCapturar], 'S'
-    mov byte[potencialEliminado], r13b
-    mov byte[fila], bl
-    mov byte[columna], bh
-    mov rbx, f1
-    call encontrarDireccionCelda
-    mov qword[direccionOficial], rbx
-    mov rax, 0
+    mov byte[oficialEliminado], r13b
     ret
 
 %macro mComerRepetitivo 0
