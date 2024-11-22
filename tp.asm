@@ -23,9 +23,9 @@ section .data
         arriba db "      2 - Rotar arriba", 0
         izquierda db "      3 - Rotar a izquierda", 0
 
-    msgErrorIngreso db "    ¡Ingreso inválido, intente nuevamente!", 0
+    msgErrorIngreso db 0x1B,'[31m',"    ¡Ingreso inválido, intente nuevamente!",0x1B,'[0m', 0
     msgEstadoTablero db "Estado actual del tablero:", 0
-    msgGanador db 0x1B,'[32m',"El ganador es %c ¡Felicidades!", '[0m', 0x1B,0
+    msgGanador db 0x1B,'[33m',"El ganador es %c ¡Felicidades!", '[0m', 0x1B,0
     msgErrorCargaPartida db "Todavia no hay una partida cargada. Por favor inicie una partida o termine", 0
     msgErrorApertura db 0x1B, '[1;31m',"Ocurrio un error al abrir un archivo", 0
     msgCargandoArchivo db 0x1B,'[32m',"Cargando partida anterior...", 0x1B, '[0m', 0
@@ -39,7 +39,7 @@ section .data
         msjCantOficialesEliminados  db "    ● Oficiales eliminados: %hhi", 0x0a, 0
     msgPreguntaCargaArchivo db "¿Desea cargar la partida anterior? (S/N): ", 0
     msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
-    msgSaludoFinal db "¡Gracias por jugar! ¡Hasta la próxima!", 0
+    msgSaludoFinal db 0x1B,'[33m',"¡Gracias por jugar! ¡Hasta la próxima!", 0x1B, '[0m', 0
     saltoLinea db 0
     msgDebeComer db 0x1B, '[1;31m',"¡Cuidado, si uno de sus soldados omite una captura será retirado!", 0x1B, '[0m', 0
     msgPerdioOficial  db 0x1B, '[1;31m',"¡Omitiste una captura, perdiste un oficial!", 0x1B, '[0m', 0
