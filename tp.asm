@@ -23,20 +23,27 @@ section .data
         arriba db "      2 - Rotar arriba", 0
         izquierda db "      3 - Rotar a izquierda", 0
 
-    msgErrorIngreso db "    ¡Ingreso inválido, intente nuevamente!", 0
+    msgErrorIngreso db 0x1B,'[31m',"    ¡Ingreso inválido, intente nuevamente!",0x1B,'[0m', 0
     msgEstadoTablero db "Estado actual del tablero:", 0
-    msgGanador db "El ganador es %c ¡Felicidades!",0
+    msgGanador db 0x1B,'[33m',"El ganador es %c ¡Felicidades!", '[0m', 0x1B,0
     msgErrorCargaPartida db "Todavia no hay una partida cargada. Por favor inicie una partida o termine", 0
-    msgErrorApertura db "Ocurrio un error al abrir un archivo", 0
-    msgCargandoArchivo db "Cargando partida anterior...", 0
+    msgErrorApertura db 0x1B, '[1;31m',"Ocurrio un error al abrir un archivo", 0
+    msgCargandoArchivo db 0x1B,'[32m',"Cargando partida anterior...", 0x1B, '[0m', 0
     msgGuardadoPartida db "Guardando datos de la partida....", 0
+    
+    msgEstadisticas db "-> Estadísticas del juego:", 0
+        msjCantidadMovTotales       db "    ● Total de movimientos: %hhi", 0x0a, 0
+        msjCantidadMovOficiales     db "    ● Movimientos de los oficiales: %hhi", 0x0a, 0
+        msjCantidadMovSoldados      db "    ● Movimientos de los soldados: %hhi", 0x0a, 0
+        msjCantSoldadosCapturados   db "    ● Capturas de soldados: %hhi", 0x0a, 0
+        msjCantOficialesEliminados  db "    ● Oficiales eliminados: %hhi", 0x0a, 0
     msgPreguntaCargaArchivo db "¿Desea cargar la partida anterior? (S/N): ", 0
     msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
-    msgSaludoFinal db "¡Gracias por jugar! ¡Hasta la próxima!", 0
+    msgSaludoFinal db 0x1B,'[33m',"¡Gracias por jugar! ¡Hasta la próxima!", 0x1B, '[0m', 0
     saltoLinea db 0
-    msgDebeComer db "¡Cuidado, si uno de sus soldados omite una captura será retirado!", 0
-    msgPerdioOficial  db "¡Omitiste una captura, perdiste un oficial!", 0
-    msgSoldadoCapturado db "¡Soldado capturado!", 0
+    msgDebeComer db 0x1B, '[1;31m',"¡Cuidado, si uno de sus soldados omite una captura será retirado!", 0x1B, '[0m', 0
+    msgPerdioOficial  db 0x1B, '[1;31m',"¡Omitiste una captura, perdiste un oficial!", 0x1B, '[0m', 0
+    msgSoldadoCapturado db 0x1B,'[32m',"¡Soldado capturado!", 0x1B, '[0m', 0
 
     msgPedirMovimiento db "Ingrese el movimiento de %s a realizar: ", 0x0a, 0
     msgFicha db "    ● Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
@@ -51,33 +58,25 @@ section .data
 
     ; ****** Tablero interno ********
 
-    columnas db " | 1234567", 0
-    f1 db "1|   XXX  ", 0x0A
-    f2 db "2|   XXX  ", 0x0A
-    f3 db "3| XXXXXXX", 0x0A
-    f4 db "4| XXXXXXX", 0
-    f5 db "5| XX   XX", 0
-    f6 db "6|     O  ", 0
-    f7 db "7|   O    ", 0
+    columnas    db " | 1234567", 0
+    f1          db "1|   XXX  ", 0x0A
+    f2          db "2|   XXX  ", 0x0A
+    f3          db "3| XXXXXXX", 0x0A
+    f4          db "4| XXXXXXX", 0
+    f5          db "5| XX   XX", 0
+    f6          db "6|     O  ", 0
+    f7          db "7|   O    ", 0
 
     ; ****** Tablero a imprimirse ********
-    columnasImp db " | 1234567", 0
-    f1Imp db "1|   XXX  ", 0x0A
-    f2Imp db "2|   XXX  ", 0x0A
-    f3Imp db "3| XXXXXXX", 0x0A
-    f4Imp db "4| XXXXXXX", 0
-    f5Imp db "5| XX   XX", 0
-    f6Imp db "6|     O  ", 0
-    f7Imp db "7|   O    ", 0
+    columnasImp db " | 1234567", 0    ; Casillas válidas:
+    f1Imp       db "1|   XXX  ", 0x0A ;                   13 14 15
+    f2Imp       db "2|   XXX  ", 0x0A ;                   23 24 25
+    f3Imp       db "3| XXXXXXX", 0x0A ;             31 32 33 34 35 36 37
+    f4Imp       db "4| XXXXXXX", 0    ;             41 42 43 44 45 46 47
+    f5Imp       db "5| XX   XX", 0    ;             51 52 53 54 55 56 57
+    f6Imp       db "6|     O  ", 0    ;                   63 64 65
+    f7Imp       db "7|   O    ", 0    ;                   73 74 75
 
-
-    ; Casillas válidas: 13 14 15
-    ;                   23 24 25
-    ;             31 32 33 34 35 36 37
-    ;             41 42 43 44 45 46 47
-    ;             51 52 53 54 55 56 57
-    ;                   63 64 65
-    ;                   73 74 75
 
 
     ; Auxiliares de guardado ----------
@@ -86,6 +85,12 @@ section .data
         fichaOficial db ' '
         jugadaActual db ' '
         rotacionesArchivo db ' '
+        movimientosOficialesArchivo db ' '
+        movimientosSoldadosArchivo db ' '
+        posOficial1A db ' '
+        posOficial2A db ' '
+        oficialesVivosA times 2 db ' '
+        soldadosLibresA times 2 db ' '
         f1A times 10 db ' '
         f2A times 10 db ' '
         f3A times 10 db ' '
@@ -96,6 +101,7 @@ section .data
         ; GUARDAR POSICIONES DE OFICIALES?
 
     ;Variables de estado ---------
+    
     rotaciones db 0
     juegoTerminado db 'N'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
@@ -111,6 +117,9 @@ section .data
     oficialesVivos db 2
     oficialEliminado db 0
 
+
+    movimientosOficiales db 0
+    movimientosSoldados  db 0
 section .bss
     fila resb 1
     columna resb 1
@@ -132,6 +141,9 @@ section .bss
 
     idArchivo resq 1
 
+    totalMovimientos resw 1
+    soldadosCapturados resb 1
+    oficialesEliminados resb 1
 
 ; ************ Macros ************ ;
 %macro mImprimirPrintf 2
@@ -297,10 +309,6 @@ continuarIngresoActual: ; No me gusta mucho esta parte del código, pero no encu
 destino:
     mImprimirPrintf msgDestino, 0
     mLeer
-    mov rcx, 0
-    mov cl, byte[rotaciones]
-    cmp rcx, 0
-    je validarCelda
 validarCelda:
     call validarEntradaCelda
     cmp rax, 1
@@ -363,7 +371,7 @@ movimientoNormal:
 
     ; Actualizar posición guardada de oficiales (el chequeo de si se está moviendo un oficial se hace dentro de la función)
     call guardarPosActualOficiales
-
+    call actualizarCantidadMovimientos
     ; Chequear si el juego terminó ->  modificar variable juegoTerminado
     call chequearJuegoTerminado
     cmp byte[juegoTerminado], 'S'
@@ -387,11 +395,10 @@ finCambio:
 terminarJuego:
     cmp byte[juegoTerminado], 'N'
     je  ofrecerGuardado
-    sub rsp, 8
     call mostrarGanador
-    add rsp, 8 
     jmp fin
 ofrecerGuardado:
+    call mostrarEstadisticas
     mImprimirPrintfModificado msgPreguntaGuardadoArchivo, 0, 0
     call recibirSiNo ;Ya se ocupa de recibir un si o no en buffer
     cmp byte[buffer], 'N' ;Si el usuario no quiere guardar el progreso, el programa termina directamente
@@ -527,33 +534,31 @@ finCopiarFila:
     ret
 
 
-validarEntradaCelda:
-    ; Valida que la celda ingresada sea válida (que pertenezca al tablero):
-    call reescribirBufferAMayusculas ; Si se ingresa 'q' o 'Q', se termina el juego
-    cmp byte [buffer], 'Q' 
-    je terminarJuego
 
-    cmp byte [buffer + 2], 0
-    jne errorIngreso ; No se ingresaron 2 caracteres
+mostrarEstadisticas:
+    mov word[totalMovimientos], 0
+    mov al, [movimientosOficiales]
+    add [totalMovimientos], al
+    mov al, [movimientosSoldados]
+    add [totalMovimientos], al
 
-    call validarEntradaCeldaInterna
-    cmp rdx, 1
-    je errorIngreso ; Error en la entrada
+    mov al, [cantidadSoldados]
+    sub al, 24
+    neg al
+    mov byte[soldadosCapturados], al 
 
-    ; Podría hacer las conversiones antes, el manejo de errores creo que sería un poco mayor
-    call convertirFilaColumna
-
-    mov rcx, 0
-    mov cl, [rotaciones]
-    cmp cl, 0
-    je finRotarIngreso
-    rotarIngreso:           ; Se rotan las coordenadas a izquierda para trabajar internamente con coordenadas "normales"
-        call rotarCoordenadasIzq
-        loop rotarIngreso
-finRotarIngreso:
-    mov rax, 0
+    mov al, byte[oficialesVivos]
+    sub al, 2
+    neg al
+    mov byte[oficialesEliminados], al
+    mImprimirPuts saltoLinea
+    mImprimirPuts msgEstadisticas
+    mImprimirPrintf msjCantidadMovTotales, [totalMovimientos]
+    mImprimirPrintf msjCantidadMovOficiales, [movimientosOficiales]
+    mImprimirPrintf msjCantidadMovSoldados, [movimientosSoldados]
+    mImprimirPrintf msjCantSoldadosCapturados, [soldadosCapturados]
+    mImprimirPrintf msjCantOficialesEliminados, [oficialesEliminados]
     ret
-
 
 mostrarGanador:
     mov rdi, msgGanador
@@ -812,27 +817,27 @@ verificarPuedeComerOf2:
     mov bx, [posOficial2]
     ret
 
-    debeMorfar:
-        mImprimirPuts msgDebeComer
-        mov byte[debeCapturar], 'S'
-        mov byte[potencialEliminado], r13b
-        mov byte[fila], bl
-        mov byte[columna], bh
-        mov rbx, f1
-        call encontrarDireccionCelda
-        mov qword[direccionOficial], rbx
-        cmp r13b, 1
-        je verificarSiAmbosPuedenComer
-        ret
+debeMorfar:
+    mImprimirPuts msgDebeComer
+    mov byte[debeCapturar], 'S'
+    mov byte[potencialEliminado], r13b
+    mov byte[fila], bl
+    mov byte[columna], bh
+    mov rbx, f1
+    call encontrarDireccionCelda
+    mov qword[direccionOficial], rbx
+    cmp r13b, 1
+    je verificarSiAmbosPuedenComer
+    ret
 
-    verificarSiAmbosPuedenComer:
-        mov rax, qword[direccionSalto]
-        mov qword[direccionSalto2], rax
-        call verificarPuedeComerOf2
-        cmp rax, 0
-        jne soloCome1
-        mov byte[ambosComen], 'S'
-        ret
+verificarSiAmbosPuedenComer:
+    mov rax, qword[direccionSalto]
+    mov qword[direccionSalto2], rax
+    call verificarPuedeComerOf2
+    cmp rax, 0
+    jne soloCome1
+    mov byte[ambosComen], 'S'
+    ret
     soloCome1:
         mov rax, qword[direccionSalto2]
         mov qword[direccionSalto], rax
@@ -904,8 +909,37 @@ puedeComerAux:
         mov rax, 1
         ret
 
+
+
 ;********* Funciones de validacion **********
 ; Código que escribí pelotudeando, seguramente haya que cambiarlo:
+validarEntradaCelda:
+    ; Valida que la celda ingresada sea válida (que pertenezca al tablero):
+    call reescribirBufferAMayusculas ; Si se ingresa 'q' o 'Q', se termina el juego
+    cmp byte [buffer], 'Q' 
+    je terminarJuego
+
+    cmp byte [buffer + 2], 0
+    jne errorIngreso ; No se ingresaron 2 caracteres
+
+    call validarEntradaCeldaInterna
+    cmp rdx, 1
+    je errorIngreso ; Error en la entrada
+
+    ; Podría hacer las conversiones antes, el manejo de errores creo que sería un poco mayor
+    call convertirFilaColumna
+
+    mov rcx, 0
+    mov cl, [rotaciones]
+    cmp cl, 0
+    je finRotarIngreso
+    rotarIngreso:           ; Se rotan las coordenadas a izquierda para trabajar internamente con coordenadas "normales"
+        call rotarCoordenadasIzq
+        loop rotarIngreso
+finRotarIngreso:
+    mov rax, 0
+    ret
+
 validarEntradaPersonalizacion:
     call reescribirBufferAMayusculas
     mov ax, [buffer]
@@ -953,6 +987,8 @@ validarEntradaPersonalizacion:
         entradaCeldaInvalida:
             mov rdx, 1
             ret
+
+
 
 
 ; ********* Funciones de rotacion **********
@@ -1131,6 +1167,17 @@ convertirFilaColumna:
     mov [columna], al
     ret
 
+actualizarCantidadMovimientos:
+    mov al, byte[cOficiales]
+    cmp byte[personajeMov], al
+    je sumarAOficiales
+    inc byte[movimientosSoldados]
+    jmp finActualizarCantidadMovimientos
+    sumarAOficiales:
+        inc byte[movimientosOficiales]
+    finActualizarCantidadMovimientos:
+        ret
+
 
 ;********* Funciones de guardado/carga de partida ***********
 cargarInfoArchivo:
@@ -1145,7 +1192,7 @@ cargarInfoArchivo:
 
     leerArchivo:
 
-        mLeerArchivo registroMatriz, 73, idArchivo
+        mLeerArchivo registroMatriz, 82, idArchivo
 
         cmp rax, 0
         jle cerrarArchivo
@@ -1155,6 +1202,12 @@ cargarInfoArchivo:
         mRecuperarDato 1, fichaOficial, cOficiales
         mRecuperarDato 1, jugadaActual, personajeMov
         mRecuperarDato 1, rotacionesArchivo, rotaciones
+        mRecuperarDato 1, movimientosOficialesArchivo, movimientosOficiales
+        mRecuperarDato 1, movimientosSoldadosArchivo, movimientosSoldados
+        mRecuperarDato 2, posOficial1A, posOficial1
+        mRecuperarDato 2, posOficial2A, posOficial2
+        mRecuperarDato 1, oficialesVivosA, oficialesVivos
+        mRecuperarDato 1, soldadosLibresA, cantidadSoldados
         mRecuperarDato 10, f1A, f1
         mRecuperarDato 10, f2A, f2
         mRecuperarDato 10, f3A, f3
@@ -1181,6 +1234,12 @@ guardarProgreso:
     mRecuperarDato 1, cOficiales, fichaOficial
     mRecuperarDato 1, personajeMov, jugadaActual
     mRecuperarDato 1, rotaciones, rotacionesArchivo
+    mRecuperarDato 1, movimientosOficiales, movimientosOficialesArchivo
+    mRecuperarDato 1, movimientosSoldados, movimientosSoldadosArchivo
+    mRecuperarDato 2, posOficial1, posOficial1A
+    mRecuperarDato 2, posOficial2, posOficial2A
+    mRecuperarDato 1, oficialesVivos, oficialesVivosA
+    mRecuperarDato 1, cantidadSoldados, soldadosLibresA
     mRecuperarDato 10, f1, f1A
     mRecuperarDato 10, f2, f2A
     mRecuperarDato 10, f3, f3A
@@ -1189,7 +1248,7 @@ guardarProgreso:
     mRecuperarDato 10, f6, f6A
     mRecuperarDato 10, f7, f7A
   
-    mEscribirArchivo registroMatriz, 73, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
+    mEscribirArchivo registroMatriz, 82, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
     jmp cerrarArchivo
     
 
