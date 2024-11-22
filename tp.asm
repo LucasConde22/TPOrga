@@ -25,7 +25,7 @@ section .data
 
     msgErrorIngreso db 0x1B,'[31m',"    ¡Ingreso inválido, intente nuevamente!",0x1B,'[0m', 0
     msgEstadoTablero db "Estado actual del tablero:", 0
-    msgGanador db 0x1B,'[33m',"El ganador es %c ¡Felicidades!", '[0m', 0x1B,0
+    msgGanador db 0x1B,'[33m',"El ganador es %c ¡Felicidades!", 0x1B, '[0m', 0
     msgErrorCargaPartida db "Todavia no hay una partida cargada. Por favor inicie una partida o termine", 0
     msgErrorApertura db 0x1B, '[1;31m',"Ocurrio un error al abrir un archivo", 0
     msgCargandoArchivo db 0x1B,'[32m',"Cargando partida anterior...", 0x1B, '[0m', 0
@@ -98,7 +98,6 @@ section .data
         f5A times 10 db ' '
         f6A times 10 db ' '
         f7A times 10 db ' '
-        ; GUARDAR POSICIONES DE OFICIALES?
 
     ;Variables de estado ---------
     
@@ -420,10 +419,15 @@ omitioCaptura:
     mov byte[oficialEliminado], r13b
 
     dec byte[oficialesVivos]
-    cmp byte[oficialesVivos], 0
     mov byte[juegoTerminado], 'S'
-    je  terminarJuego
+    cmp byte[oficialesVivos], 0
+    jne  seguirOmision
+    sub rsp, 8
+    call mostrarGanador
+    add rsp, 8
+    jmp fin
 
+seguirOmision:
     mov byte[juegoTerminado], 'N'
     mov al, byte[cSoldados]
     mov byte[personajeMov], al
@@ -799,22 +803,30 @@ chequearAdyacenteGenerico:
         ret
 
 verificarSiOficialPuedeComer:
+    cmp byte[oficialEliminado], 1
+    je bpOficial1YaEliminado
     mOficialABuffer posOficial1
     call puedeComer
     mov r13b, 1
     mov bx, [posOficial1]
     cmp rax, 0
     je debeMorfar
+bpOficial1YaEliminado:
     call verificarPuedeComerOf2
     cmp rax, 0
     je debeMorfar
     ret
 
 verificarPuedeComerOf2:
+    cmp byte[oficialEliminado], 2
+    je bpOficial2YaEliminado
     mOficialABuffer posOficial2
     call puedeComer
     mov r13b, 2
     mov bx, [posOficial2]
+    ret
+    bpOficial2YaEliminado:
+    mov rax, 1
     ret
 
 debeMorfar:
