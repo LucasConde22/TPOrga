@@ -25,10 +25,10 @@ section .data
 
     msgErrorIngreso db "    ¡Ingreso inválido, intente nuevamente!", 0
     msgEstadoTablero db "Estado actual del tablero:", 0
-    msgGanador db "El ganador es %c ¡Felicidades!",0
+    msgGanador db 0x1B,'[32m',"El ganador es %c ¡Felicidades!", '[0m', 0x1B,0
     msgErrorCargaPartida db "Todavia no hay una partida cargada. Por favor inicie una partida o termine", 0
-    msgErrorApertura db "Ocurrio un error al abrir un archivo", 0
-    msgCargandoArchivo db "Cargando partida anterior...", 0
+    msgErrorApertura db 0x1B, '[1;31m',"Ocurrio un error al abrir un archivo", 0
+    msgCargandoArchivo db 0x1B,'[32m',"Cargando partida anterior...", 0x1B, '[0m', 0
     msgGuardadoPartida db "Guardando datos de la partida....", 0
     
     msgEstadisticas db "-> Estadísticas del juego:", 0
@@ -41,9 +41,9 @@ section .data
     msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
     msgSaludoFinal db "¡Gracias por jugar! ¡Hasta la próxima!", 0
     saltoLinea db 0
-    msgDebeComer db "¡Cuidado, si uno de sus soldados omite una captura será retirado!", 0
-    msgPerdioOficial  db "¡Omitiste una captura, perdiste un oficial!", 0
-    msgSoldadoCapturado db "¡Soldado capturado!", 0
+    msgDebeComer db 0x1B, '[1;31m',"¡Cuidado, si uno de sus soldados omite una captura será retirado!", 0x1B, '[0m', 0
+    msgPerdioOficial  db 0x1B, '[1;31m',"¡Omitiste una captura, perdiste un oficial!", 0x1B, '[0m', 0
+    msgSoldadoCapturado db 0x1B,'[32m',"¡Soldado capturado!", 0x1B, '[0m', 0
 
     msgPedirMovimiento db "Ingrese el movimiento de %s a realizar: ", 0x0a, 0
     msgFicha db "    ● Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
@@ -58,33 +58,25 @@ section .data
 
     ; ****** Tablero interno ********
 
-    columnas db " | 1234567", 0
-    f1 db "1|   XXX  ", 0x0A
-    f2 db "2|   XXX  ", 0x0A
-    f3 db "3| XXXXXXX", 0x0A
-    f4 db "4| XXXXXXX", 0
-    f5 db "5| XX   XX", 0
-    f6 db "6|     O  ", 0
-    f7 db "7|   O    ", 0
+    columnas    db " | 1234567", 0
+    f1          db "1|   XXX  ", 0x0A
+    f2          db "2|   XXX  ", 0x0A
+    f3          db "3| XXXXXXX", 0x0A
+    f4          db "4| XXXXXXX", 0
+    f5          db "5| XX   XX", 0
+    f6          db "6|     O  ", 0
+    f7          db "7|   O    ", 0
 
     ; ****** Tablero a imprimirse ********
-    columnasImp db " | 1234567", 0
-    f1Imp db "1|   XXX  ", 0x0A
-    f2Imp db "2|   XXX  ", 0x0A
-    f3Imp db "3| XXXXXXX", 0x0A
-    f4Imp db "4| XXXXXXX", 0
-    f5Imp db "5| XX   XX", 0
-    f6Imp db "6|     O  ", 0
-    f7Imp db "7|   O    ", 0
+    columnasImp db " | 1234567", 0    ; Casillas válidas:
+    f1Imp       db "1|   XXX  ", 0x0A ;                   13 14 15
+    f2Imp       db "2|   XXX  ", 0x0A ;                   23 24 25
+    f3Imp       db "3| XXXXXXX", 0x0A ;             31 32 33 34 35 36 37
+    f4Imp       db "4| XXXXXXX", 0    ;             41 42 43 44 45 46 47
+    f5Imp       db "5| XX   XX", 0    ;             51 52 53 54 55 56 57
+    f6Imp       db "6|     O  ", 0    ;                   63 64 65
+    f7Imp       db "7|   O    ", 0    ;                   73 74 75
 
-
-    ; Casillas válidas: 13 14 15
-    ;                   23 24 25
-    ;             31 32 33 34 35 36 37
-    ;             41 42 43 44 45 46 47
-    ;             51 52 53 54 55 56 57
-    ;                   63 64 65
-    ;                   73 74 75
 
 
     ; Auxiliares de guardado ----------
@@ -93,6 +85,12 @@ section .data
         fichaOficial db ' '
         jugadaActual db ' '
         rotacionesArchivo db ' '
+        movimientosOficialesArchivo db ' '
+        movimientosSoldadosArchivo db ' '
+        posOficial1A db ' '
+        posOficial2A db ' '
+        oficialesVivosA times 2 db ' '
+        soldadosLibresA times 2 db ' '
         f1A times 10 db ' '
         f2A times 10 db ' '
         f3A times 10 db ' '
@@ -104,7 +102,7 @@ section .data
 
     ;Variables de estado ---------
     
-    rotaciones db 3
+    rotaciones db 0
     juegoTerminado db 'N'
     fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
     archivoCargadoCorrectamente db 'S'
@@ -1194,7 +1192,7 @@ cargarInfoArchivo:
 
     leerArchivo:
 
-        mLeerArchivo registroMatriz, 73, idArchivo
+        mLeerArchivo registroMatriz, 82, idArchivo
 
         cmp rax, 0
         jle cerrarArchivo
@@ -1204,6 +1202,12 @@ cargarInfoArchivo:
         mRecuperarDato 1, fichaOficial, cOficiales
         mRecuperarDato 1, jugadaActual, personajeMov
         mRecuperarDato 1, rotacionesArchivo, rotaciones
+        mRecuperarDato 1, movimientosOficialesArchivo, movimientosOficiales
+        mRecuperarDato 1, movimientosSoldadosArchivo, movimientosSoldados
+        mRecuperarDato 2, posOficial1A, posOficial1
+        mRecuperarDato 2, posOficial2A, posOficial2
+        mRecuperarDato 1, oficialesVivosA, oficialesVivos
+        mRecuperarDato 1, soldadosLibresA, cantidadSoldados
         mRecuperarDato 10, f1A, f1
         mRecuperarDato 10, f2A, f2
         mRecuperarDato 10, f3A, f3
@@ -1230,6 +1234,12 @@ guardarProgreso:
     mRecuperarDato 1, cOficiales, fichaOficial
     mRecuperarDato 1, personajeMov, jugadaActual
     mRecuperarDato 1, rotaciones, rotacionesArchivo
+    mRecuperarDato 1, movimientosOficiales, movimientosOficialesArchivo
+    mRecuperarDato 1, movimientosSoldados, movimientosSoldadosArchivo
+    mRecuperarDato 2, posOficial1, posOficial1A
+    mRecuperarDato 2, posOficial2, posOficial2A
+    mRecuperarDato 1, oficialesVivos, oficialesVivosA
+    mRecuperarDato 1, cantidadSoldados, soldadosLibresA
     mRecuperarDato 10, f1, f1A
     mRecuperarDato 10, f2, f2A
     mRecuperarDato 10, f3, f3A
@@ -1238,7 +1248,7 @@ guardarProgreso:
     mRecuperarDato 10, f6, f6A
     mRecuperarDato 10, f7, f7A
   
-    mEscribirArchivo registroMatriz, 73, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
+    mEscribirArchivo registroMatriz, 82, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
     jmp cerrarArchivo
     
 
