@@ -321,7 +321,6 @@ personalizar:
 cicloJuego:
     ; Mostrar tablero
     call mostrarTablero
-
     ; Pedir movimiento
     mImprimirPrintf msgPedirMovimiento, personajeMov
     mov al, byte[cOficiales]
@@ -498,6 +497,7 @@ seguirOmision:
 ;*********Funciones de muestreo**********
 mostrarTablero:
     ; Muestra el tablero en la terminal
+    mImprimirPuts saltoLinea
     sub rsp, 16
     call pasarTableroImpresion
     mImprimirPuts msgEstadoTablero
