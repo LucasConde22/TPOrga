@@ -31,12 +31,32 @@ section .data
     msgCargandoArchivo db 0x1B,'[32m',"Cargando partida anterior...", 0x1B, '[0m', 0
     msgGuardadoPartida db "Guardando datos de la partida....", 0
     
-    msgEstadisticas db "-> Estadísticas del juego:", 0
+    msgEstadisticas db 0x1B,'[32m',"-> Estadísticas del juego:", 0x1B, '[0m', 0
         msjCantidadMovTotales       db "    ● Total de movimientos: %hhi", 0x0a, 0
-        msjCantidadMovOficiales     db "    ● Movimientos de los oficiales: %hhi", 0x0a, 0
-        msjCantidadMovSoldados      db "    ● Movimientos de los soldados: %hhi", 0x0a, 0
+        
+        msjCantidadMovOficiales             db "    ● Movimientos totales de los oficiales: %hhi", 0x0a, 0
+        msjCantidadMovOficialesDetalleAI    db "            > Hacia diagonal superior izquierda:    %li", 0x0a, 0
+        msjCantidadMovOficialesDetalleAC    db "            > Hacia arriba:                         %li", 0x0a, 0
+        msjCantidadMovOficialesDetalleAD    db "            > Hacia diagonal superior derecha:      %li", 0x0a, 0
+        msjCantidadMovOficialesDetalleCI    db "            > Hacia izquierda:                      %li", 0x0a, 0
+        msjCantidadMovOficialesDetalleCD    db "            > Hacia derecha:                        %li", 0x0a, 0
+        msjCantidadMovOficialesDetalleBI    db "            > Hacia diagonal inferior izquierda:    %li", 0x0a, 0
+        msjCantidadMovOficialesDetalleBC    db "            > Hacia abajo:                          %li", 0x0a, 0
+        msjCantidadMovOficialesDetalleBD    db "            > Hacia diagonal inferior derecha:      %li", 0x0a, 0
+        
+        msjCantidadMovSoldados              db "    ● Movimientos totales de los soldados: %hhi", 0x0a, 0
+        msjCantidadMovSoldadosDetalleAI     db "            > Hacia diagonal superior izquierda:    %li", 0x0a, 0
+        msjCantidadMovSoldadosDetalleAC     db "            > Hacia arriba:                         %li", 0x0a, 0
+        msjCantidadMovSoldadosDetalleAD     db "            > Hacia diagonal superior derecha:      %li", 0x0a, 0
+        msjCantidadMovSoldadosDetalleCI     db "            > Hacia izquierda:                      %li", 0x0a, 0
+        msjCantidadMovSoldadosDetalleCD     db "            > Hacia derecha:                        %li", 0x0a, 0
+        msjCantidadMovSoldadosDetalleBI     db "            > Hacia diagonal inferior izquierda:    %li", 0x0a, 0
+        msjCantidadMovSoldadosDetalleBC     db "            > Hacia abajo:                          %li", 0x0a, 0
+        msjCantidadMovSoldadosDetalleBD     db "            > Hacia diagonal inferior derecha:      %li", 0x0a, 0
+        
         msjCantSoldadosCapturados   db "    ● Capturas de soldados: %hhi", 0x0a, 0
         msjCantOficialesEliminados  db "    ● Oficiales eliminados: %hhi", 0x0a, 0
+
     msgPreguntaCargaArchivo db "¿Desea cargar la partida anterior? (S/N): ", 0
     msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
     msgSaludoFinal db 0x1B,'[33m',"¡Gracias por jugar! ¡Hasta la próxima!", 0x1B, '[0m', 0
@@ -117,8 +137,35 @@ section .data
     oficialEliminado db 0
 
 
-    movimientosOficiales db 0
-    movimientosSoldados  db 0
+    ;Contadores de movimientos ---
+    filInicioOriginal      db 0
+    filDestinoOriginal      db 0
+    colInicioOriginal      db 0
+    colDestinoOriginal      db 0
+    desplazamiento          db '**'
+    movimientosPosibles     db 'AI','AC','AD','CI','CD','BI','BC','BD'
+      
+    movimientosOficiales   dq 0    ;   AI|AC|AD     
+    movimientosOficialesAI dq 0    ;   CI|X |CD
+    movimientosOficialesAC dq 0    ;   BI|BC|BD     
+    movimientosOficialesAD dq 0    ;            
+    movimientosOficialesCI dq 0    ;   A: Arriba      B: Bajo
+    movimientosOficialesCD dq 0    ;   C: Centro      I: Izquierda    
+    movimientosOficialesBI dq 0    ;   D: Derecha     (X punto de referencia)
+    movimientosOficialesBC dq 0 
+    movimientosOficialesBD dq 0
+
+    movimientosSoldados   dq 0                  
+    movimientosSoldadosAI dq 0    
+    movimientosSoldadosAC dq 0       
+    movimientosSoldadosAD dq 0              
+    movimientosSoldadosCI dq 0   
+    movimientosSoldadosCD dq 0    
+    movimientosSoldadosBI dq 0    
+    movimientosSoldadosBC dq 0 
+    movimientosSoldadosBD dq 0 
+
+
 section .bss
     fila resb 1
     columna resb 1
@@ -274,7 +321,6 @@ personalizar:
 cicloJuego:
     ; Mostrar tablero
     call mostrarTablero
-
     ; Pedir movimiento
     mImprimirPrintf msgPedirMovimiento, personajeMov
     mov al, byte[cOficiales]
@@ -285,6 +331,12 @@ cicloJuego:
 actual:
     mImprimirPrintf msgFicha, 0
     mLeer
+    
+    mov ah, [buffer] ; Supuesta fila
+    mov al, [buffer + 1] ; Supuesta columna
+    mov [filInicioOriginal], ah ;Para el posterior conteo de movimientos
+    mov [colInicioOriginal], al
+
     call validarEntradaCelda
     cmp rax, 1
     je actual ; Error en la entrada
@@ -292,8 +344,10 @@ actual:
 
     mov al, [fila]
     mov [filaActual], al
+   
     mov al, [columna]
     mov [columnaActual], al
+
 
     mov rbx, f1
     call encontrarDireccionCelda
@@ -308,6 +362,10 @@ continuarIngresoActual: ; No me gusta mucho esta parte del código, pero no encu
 destino:
     mImprimirPrintf msgDestino, 0
     mLeer
+    mov ah, [buffer] ; Supuesta fila
+    mov al, [buffer + 1] ; Supuesta columna
+    mov [filDestinoOriginal], ah ;Para el posterior conteo de movimientos
+    mov [colDestinoOriginal], al
 validarCelda:
     call validarEntradaCelda
     cmp rax, 1
@@ -328,7 +386,7 @@ continuarIngresoDestino:
     call chequearMovimientoCorrecto ; Chequear si el movimiento es correcto
     cmp rax, 1
     je actual ; No se movió a una celda dentro del rango permitido 
-
+    
     ; Realizar movimiento:
     cmp byte[debeCapturar], 'S'
     jne movimientoNormal
@@ -441,6 +499,7 @@ seguirOmision:
 ;*********Funciones de muestreo**********
 mostrarTablero:
     ; Muestra el tablero en la terminal
+    mImprimirPuts saltoLinea
     sub rsp, 16
     call pasarTableroImpresion
     mImprimirPuts msgEstadoTablero
@@ -560,10 +619,28 @@ mostrarEstadisticas:
     mImprimirPuts saltoLinea
     mImprimirPuts msgEstadisticas
     mImprimirPrintf msjCantidadMovTotales, [totalMovimientos]
+
     mImprimirPrintf msjCantidadMovOficiales, [movimientosOficiales]
+    mImprimirPrintf msjCantidadMovOficialesDetalleAI, qword[movimientosOficialesAI]
+    mImprimirPrintf msjCantidadMovOficialesDetalleAC, qword[movimientosOficialesAC]
+    mImprimirPrintf msjCantidadMovOficialesDetalleAD, qword[movimientosOficialesAD]
+    mImprimirPrintf msjCantidadMovOficialesDetalleCI, qword[movimientosOficialesCI]
+    mImprimirPrintf msjCantidadMovOficialesDetalleCD, qword[movimientosOficialesCD]
+    mImprimirPrintf msjCantidadMovOficialesDetalleBI, qword[movimientosOficialesBI]
+    mImprimirPrintf msjCantidadMovOficialesDetalleBC, qword[movimientosOficialesBC]
+    mImprimirPrintf msjCantidadMovOficialesDetalleBD, qword[movimientosOficialesBD]
     mImprimirPrintf msjCantidadMovSoldados, [movimientosSoldados]
+    mImprimirPrintf msjCantidadMovSoldadosDetalleAI, qword[movimientosSoldadosAI]
+    mImprimirPrintf msjCantidadMovSoldadosDetalleAC, qword[movimientosSoldadosAC]
+    mImprimirPrintf msjCantidadMovSoldadosDetalleAD, qword[movimientosSoldadosAD]
+    mImprimirPrintf msjCantidadMovSoldadosDetalleCI, qword[movimientosSoldadosCI]
+    mImprimirPrintf msjCantidadMovSoldadosDetalleCD, qword[movimientosSoldadosCD]
+    mImprimirPrintf msjCantidadMovSoldadosDetalleBI, qword[movimientosSoldadosBI]
+    mImprimirPrintf msjCantidadMovSoldadosDetalleBC, qword[movimientosSoldadosBC]
+    mImprimirPrintf msjCantidadMovSoldadosDetalleBD, qword[movimientosSoldadosBD]
     mImprimirPrintf msjCantSoldadosCapturados, [soldadosCapturados]
     mImprimirPrintf msjCantOficialesEliminados, [oficialesEliminados]
+    mImprimirPuts saltoLinea
     ret
 
 mostrarGanador:
@@ -938,6 +1015,7 @@ validarEntradaCelda:
     ; Podría hacer las conversiones antes, el manejo de errores creo que sería un poco mayor
     call convertirFilaColumna
 
+    
     mov rcx, 0
     mov cl, [rotaciones]
     cmp cl, 0
@@ -1108,6 +1186,88 @@ entradaValida:
     ret
 
 
+;********* Funciones de estadísticas **********
+
+actualizarCantidadMovimientos:
+        call guardarDesplazamiento
+        push rax
+        push rdx
+        mov rdx, 0
+        mov al, byte[cOficiales]
+        cmp byte[personajeMov], al
+        je actualizarOficiales
+        inc byte[movimientosSoldados]
+        add rdx, 72
+        jmp finActualizarCantidadMovimientos
+        actualizarOficiales:
+            inc byte[movimientosOficiales]
+    finActualizarCantidadMovimientos:
+        call actualizarContadoresMovimientosDirecciones
+        pop rdx
+        pop rax
+        ret
+
+
+actualizarContadoresMovimientosDirecciones:
+    push rdi
+    push rsi
+    push rcx
+    push rbx
+    lea rdi, [movimientosPosibles]
+    mov r10, 0
+    mov rbx, 0
+    recorrerPosiblesDirecciones:
+        lea rsi, [desplazamiento]
+        lea rdi, [movimientosPosibles]
+        add rdi, r10
+        mov rcx, 2
+        repe cmpsb
+        je finActualizarContadoresMovimientosDirecciones
+        add rbx, 8
+        add r10, 2
+        cmp r10, 18
+        jge finActualizarContadoresMovimientosDirecciones
+        jmp recorrerPosiblesDirecciones
+    finActualizarContadoresMovimientosDirecciones:
+        add rbx, rdx
+        inc qword[movimientosOficialesAI + rbx]
+        pop rbx
+        pop rcx
+        pop rsi
+        pop rdi
+        ret
+
+
+
+guardarDesplazamiento: ; Guarda en movimiento dos caracteres dependiendo de cómo fue el desplazamiento
+        mov al, byte[filDestinoOriginal]
+        sub al, byte[filInicioOriginal]
+
+        cmp al, 0
+        jl  guardarMovimientoFilArriba
+        jg  guardarMovimientoFilAbajo
+        mov byte[desplazamiento], 'C'
+        jmp moverColumna
+            guardarMovimientoFilArriba:
+                mov byte[desplazamiento], 'A'
+                jmp moverColumna
+            guardarMovimientoFilAbajo:
+                mov byte[desplazamiento], 'B'
+    moverColumna:
+        mov al, byte[colDestinoOriginal]
+        sub al, byte[colInicioOriginal]
+        cmp al, 0
+        mov byte[desplazamiento + 1], 'C'
+        jl guardarMovimientoColAIz
+        jg guardarMovimientoColADe
+        jmp finMoverColumna
+            guardarMovimientoColADe:
+                mov byte[desplazamiento + 1], 'D'
+                jmp finMoverColumna
+            guardarMovimientoColAIz:
+                mov byte[desplazamiento + 1], 'I'
+        finMoverColumna:
+        ret 
 
 ;********* Funciones auxiliares **********
 guardarPosActualOficiales:
@@ -1175,17 +1335,6 @@ convertirFilaColumna:
     sub al, 48
     mov [columna], al
     ret
-
-actualizarCantidadMovimientos:
-    mov al, byte[cOficiales]
-    cmp byte[personajeMov], al
-    je sumarAOficiales
-    inc byte[movimientosSoldados]
-    jmp finActualizarCantidadMovimientos
-    sumarAOficiales:
-        inc byte[movimientosOficiales]
-    finActualizarCantidadMovimientos:
-        ret
 
 
 ;********* Funciones de guardado/carga de partida ***********
