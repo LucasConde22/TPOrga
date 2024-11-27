@@ -24,7 +24,7 @@ section .data
         izquierda db "      3 - Rotar a izquierda", 0
 
     msgErrorIngreso db 0x1B,'[31m',"    ¡Ingreso inválido, intente nuevamente!",0x1B,'[0m', 0
-    msgEstadoTablero db "Estado actual del tablero:", 0
+    msgEstadoTablero db "Estado actual del tablero:", 0x0a, 0
     msgGanador db 0x1B,'[33m',"El ganador es %c ¡Felicidades!", 0x1B, '[0m', 0
     msgErrorCargaPartida db "Todavia no hay una partida cargada. Por favor inicie una partida o termine", 0
     msgErrorApertura db 0x1B, '[1;31m',"Ocurrio un error al abrir un archivo", 0
@@ -62,9 +62,9 @@ section .data
     f1          db "1|   XXX  ", 0x0A
     f2          db "2|   XXX  ", 0x0A
     f3          db "3| XXXXXXX", 0x0A
-    f4          db "4| XXXX XX", 0
-    f5          db "5| XX    X", 0
-    f6          db "6|    XO  ", 0
+    f4          db "4| XXXXXXX", 0
+    f5          db "5| XX   XX", 0
+    f6          db "6|     O  ", 0
     f7          db "7|   O    ", 0
 
     ; ****** Tablero a imprimirse ********
@@ -72,9 +72,9 @@ section .data
     f1Imp       db "1|   XXX  ", 0x0A ;                   13 14 15
     f2Imp       db "2|   XXX  ", 0x0A ;                   23 24 25
     f3Imp       db "3| XXXXXXX", 0x0A ;             31 32 33 34 35 36 37
-    f4Imp       db "4| XXXX XX", 0    ;             41 42 43 44 45 46 47
-    f5Imp       db "5| XX    X", 0    ;             51 52 53 54 55 56 57
-    f6Imp       db "6|    XO  ", 0    ;                   63 64 65
+    f4Imp       db "4| XXXXXXX", 0    ;             41 42 43 44 45 46 47
+    f5Imp       db "5| XX   XX", 0    ;             51 52 53 54 55 56 57
+    f6Imp       db "6|     O  ", 0    ;                  63 64 65
     f7Imp       db "7|   O    ", 0    ;                   73 74 75
 
 
@@ -107,7 +107,7 @@ section .data
     archivoCargadoCorrectamente db 'S'
     archivoGuardadoCorrectamente db 'S'
     entradaValidaPersonalizacion db 'S'
-    personajeMov db 'O', 0
+    personajeMov db 'X', 0
     cantidadSoldados db 24
     posOficial1 db 6, 5
     posOficial2 db 7, 3
@@ -394,7 +394,9 @@ finCambio:
 terminarJuego:
     cmp byte[juegoTerminado], 'N'
     je  ofrecerGuardado
+    sub rsp, 8
     call mostrarGanador
+    add rsp, 8
     jmp fin
 ofrecerGuardado:
     call mostrarEstadisticas
@@ -569,11 +571,6 @@ mostrarGanador:
     mov rsi, [fichaGanador]
     sub rsp, 8
     call printf
-    add rsp, 8
-
-    sub rsp, 8
-    mov rdi, saltoLinea
-    call puts
     add rsp, 8
 
 ;********* Funciones de movimiento y chequeo de movimiento **********
