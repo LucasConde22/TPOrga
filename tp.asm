@@ -31,7 +31,7 @@ section .data
     msgCargandoArchivo db 0x1B,'[32m',"Cargando partida anterior...", 0x1B, '[0m', 0
     msgGuardadoPartida db "Guardando datos de la partida....", 0
     
-    msgEstadisticas db "-> Estadísticas del juego:", 0
+    msgEstadisticas db 0x1B,'[32m',"-> Estadísticas del juego:", 0x1B, '[0m', 0
         msjCantidadMovTotales       db "    ● Total de movimientos: %hhi", 0x0a, 0
         
         msjCantidadMovOficiales             db "    ● Movimientos totales de los oficiales: %hhi", 0x0a, 0
@@ -638,6 +638,7 @@ mostrarEstadisticas:
     mImprimirPrintf msjCantidadMovSoldadosDetalleBD, qword[movimientosSoldadosBD]
     mImprimirPrintf msjCantSoldadosCapturados, [soldadosCapturados]
     mImprimirPrintf msjCantOficialesEliminados, [oficialesEliminados]
+    mImprimirPuts saltoLinea
     ret
 
 mostrarGanador:
