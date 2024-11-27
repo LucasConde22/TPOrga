@@ -472,6 +472,7 @@ fin:
     syscall ; Salir del programa
 
 omitioCaptura:
+    call actualizarCantidadMovimientos
     mImprimirPuts msgPerdioOficial
     mov rcx, [direccionOficial]
     mov byte[rcx], ' ' ; Se quita al oficial
