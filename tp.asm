@@ -332,6 +332,12 @@ cicloJuego:
 actual:
     mImprimirPrintf msgFicha, 0
     mLeer
+    
+    mov ah, [buffer] ; Supuesta fila
+    mov al, [buffer + 1] ; Supuesta columna
+    mov [filInicioOriginal], ah ;Para el posterior conteo de movimientos
+    mov [colInicioOriginal], al
+
     call validarEntradaCelda
     cmp rax, 1
     je actual ; Error en la entrada
@@ -339,10 +345,9 @@ actual:
 
     mov al, [fila]
     mov [filaActual], al
-    mov [filInicioOriginal], al ;Para el posterior conteo de movimientos
+   
     mov al, [columna]
     mov [columnaActual], al
-    mov [colInicioOriginal], al
 
 
     mov rbx, f1
@@ -358,16 +363,18 @@ continuarIngresoActual: ; No me gusta mucho esta parte del código, pero no encu
 destino:
     mImprimirPrintf msgDestino, 0
     mLeer
+    mov ah, [buffer] ; Supuesta fila
+    mov al, [buffer + 1] ; Supuesta columna
+    mov [filDestinoOriginal], ah ;Para el posterior conteo de movimientos
+    mov [colDestinoOriginal], al
 validarCelda:
     call validarEntradaCelda
     cmp rax, 1
     je destino ; Error en la entrada
     mov al, [fila]
     mov [filaDestino], al
-    mov [filDestinoOriginal], al
     mov al, [columna]
     mov [columnaDestino], al
-    mov [colDestinoOriginal], al
 
     mov rbx, f1
     call encontrarDireccionCelda
@@ -1010,6 +1017,7 @@ validarEntradaCelda:
     ; Podría hacer las conversiones antes, el manejo de errores creo que sería un poco mayor
     call convertirFilaColumna
 
+    
     mov rcx, 0
     mov cl, [rotaciones]
     cmp cl, 0
@@ -1219,7 +1227,7 @@ actualizarContadoresMovimientosDirecciones:
         je finActualizarContadoresMovimientosDirecciones
         add rbx, 8
         add r10, 2
-        cmp rbx, 56
+        cmp r10, 18
         jge finActualizarContadoresMovimientosDirecciones
         jmp recorrerPosiblesDirecciones
     finActualizarContadoresMovimientosDirecciones:
@@ -1252,6 +1260,8 @@ guardarDesplazamiento: ; Guarda en movimiento dos caracteres dependiendo de cóm
         sub al, byte[colInicioOriginal]
         cmp al, 0
         mov byte[desplazamiento + 1], 'C'
+        jl guardarMovimientoColAIz
+        jg guardarMovimientoColADe
         jmp finMoverColumna
             guardarMovimientoColADe:
                 mov byte[desplazamiento + 1], 'D'
