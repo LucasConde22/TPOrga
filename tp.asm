@@ -705,7 +705,7 @@ movimientoAdelanteDiagonalSoldados:
     mov al, byte[filaDestino]
     sub al, byte[filaActual]
     cmp al, 1
-    jl errorIngreso
+    jne errorIngreso
     jmp chequeoColumnasMovSoldados
 
 movimientoFilaRojaSoldados:
