@@ -172,6 +172,7 @@ section .bss
     direccionSalto resq 1 ; Dirección de celda a la que se debe saltar
     direccionSalto2 resq 1 ; Dirección de celda alternativa a la que se puede saltar si los dos oficiales pueden comer
     direccionComida resq 1 ; Dirección de celda con soldado a ser eliminado
+    direccionComida2 resq 1; Dirección de celda alternativa con soldado a ser eliminado si los dos oficiales pueden comer
     direccionOficial resq 1 ; Dirección de celda con oficial que debe capturar
     potencialEliminado resb 1 ; Número de oficial que se eliminará si omite la captura
 
@@ -412,6 +413,8 @@ segundaOpcion:
     mov rcx, [direccionOficial]
     cmp rcx, [qAux]
     jne omitioCapturaAux
+    mov rcx, [direccionComida2]
+    mov [direccionComida], rcx
 
 captura:
     ; Si se llega a este punto, se come al soldado:
@@ -940,6 +943,8 @@ debeMorfar:
 verificarSiAmbosPuedenComer:
     mov rax, qword[direccionSalto]
     mov qword[direccionSalto2], rax
+    mov rax, [direccionComida]
+    mov qword[direccionComida2], rax
     call verificarPuedeComerOf2
     cmp rax, 0
     jne soloCome1
