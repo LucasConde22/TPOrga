@@ -106,8 +106,6 @@ section .data
         fichaOficial db ' '
         jugadaActual db ' '
         rotacionesArchivo db ' '
-        movimientosOficialesArchivo db ' '
-        movimientosSoldadosArchivo db ' '
         posOficial1A times 2 db ' '
         posOficial2A times 2 db ' '
         oficialesVivosA db ' '
@@ -119,6 +117,24 @@ section .data
         f5A times 10 db ' '
         f6A times 10 db ' '
         f7A times 10 db ' '
+        movimientosOficialesArchivo   times 8 db ' '        
+        movimientosOficialesAIArchivo times 8 db ' '   
+        movimientosOficialesACArchivo times 8 db ' '      
+        movimientosOficialesADArchivo times 8 db ' '               
+        movimientosOficialesCIArchivo times 8 db ' '    
+        movimientosOficialesCDArchivo times 8 db ' '    
+        movimientosOficialesBIArchivo times 8 db ' '    
+        movimientosOficialesBCArchivo times 8 db ' ' 
+        movimientosOficialesBDArchivo times 8 db ' '
+        movimientosSoldadosArchivo    times 8 db ' '                  
+        movimientosSoldadosAIArchivo  times 8 db ' '    
+        movimientosSoldadosACArchivo  times 8 db ' '       
+        movimientosSoldadosADArchivo  times 8 db ' '              
+        movimientosSoldadosCIArchivo  times 8 db ' '   
+        movimientosSoldadosCDArchivo  times 8 db ' '    
+        movimientosSoldadosBIArchivo  times 8 db ' '    
+        movimientosSoldadosBCArchivo  times 8 db ' ' 
+        movimientosSoldadosBDArchivo  times 8 db ' '
 
     ;Variables de estado ---------
     
@@ -1447,7 +1463,7 @@ cargarInfoArchivo:
 
     leerArchivo:
 
-        mLeerArchivo registroMatriz, 82, idArchivo
+        mLeerArchivo registroMatriz, 226, idArchivo
 
         cmp rax, 0
         jle cerrarArchivo
@@ -1470,9 +1486,27 @@ cargarInfoArchivo:
         mRecuperarDato 10, f5A, f5
         mRecuperarDato 10, f6A, f6
         mRecuperarDato 10, f7A, f7
+        mRecuperarDato  8, movimientosOficialesArchivo,   movimientosOficiales 
+        mRecuperarDato  8, movimientosOficialesAIArchivo, movimientosOficialesAI
+        mRecuperarDato  8, movimientosOficialesACArchivo, movimientosOficialesAC
+        mRecuperarDato  8, movimientosOficialesADArchivo, movimientosOficialesAD
+        mRecuperarDato  8, movimientosOficialesCIArchivo, movimientosOficialesCI
+        mRecuperarDato  8, movimientosOficialesCDArchivo, movimientosOficialesCD
+        mRecuperarDato  8, movimientosOficialesBIArchivo, movimientosOficialesBI
+        mRecuperarDato  8, movimientosOficialesBCArchivo, movimientosOficialesBC
+        mRecuperarDato  8, movimientosOficialesBDArchivo, movimientosOficialesBD
+        mRecuperarDato  8, movimientosSoldadosArchivo,   movimientosSoldados 
+        mRecuperarDato  8, movimientosSoldadosAIArchivo, movimientosSoldadosAI
+        mRecuperarDato  8, movimientosSoldadosACArchivo, movimientosSoldadosAC
+        mRecuperarDato  8, movimientosSoldadosADArchivo, movimientosSoldadosAD
+        mRecuperarDato  8, movimientosSoldadosCIArchivo, movimientosSoldadosCI
+        mRecuperarDato  8, movimientosSoldadosCDArchivo, movimientosSoldadosCD
+        mRecuperarDato  8, movimientosSoldadosBIArchivo, movimientosSoldadosBI
+        mRecuperarDato  8, movimientosSoldadosBCArchivo, movimientosSoldadosBC
+        mRecuperarDato  8, movimientosSoldadosBDArchivo, movimientosSoldadosBD
 
         jmp leerArchivo
-
+                                                                                                    
 guardarProgreso:
 
     mImprimirPuts msgGuardadoPartida
@@ -1502,10 +1536,28 @@ guardarProgreso:
     mRecuperarDato 10, f5, f5A
     mRecuperarDato 10, f6, f6A
     mRecuperarDato 10, f7, f7A
+    mRecuperarDato  8, movimientosOficiales,   movimientosOficialesArchivo 
+    mRecuperarDato  8, movimientosOficialesAI, movimientosOficialesAIArchivo
+    mRecuperarDato  8, movimientosOficialesAC, movimientosOficialesACArchivo
+    mRecuperarDato  8, movimientosOficialesAD, movimientosOficialesADArchivo
+    mRecuperarDato  8, movimientosOficialesCI, movimientosOficialesCIArchivo
+    mRecuperarDato  8, movimientosOficialesCD, movimientosOficialesCDArchivo
+    mRecuperarDato  8, movimientosOficialesBI, movimientosOficialesBIArchivo
+    mRecuperarDato  8, movimientosOficialesBC, movimientosOficialesBCArchivo
+    mRecuperarDato  8, movimientosOficialesBD, movimientosOficialesBDArchivo
+    mRecuperarDato  8, movimientosSoldados,   movimientosSoldadosArchivo 
+    mRecuperarDato  8, movimientosSoldadosAI, movimientosSoldadosAIArchivo
+    mRecuperarDato  8, movimientosSoldadosAC, movimientosSoldadosACArchivo
+    mRecuperarDato  8, movimientosSoldadosAD, movimientosSoldadosADArchivo
+    mRecuperarDato  8, movimientosSoldadosCI, movimientosSoldadosCIArchivo
+    mRecuperarDato  8, movimientosSoldadosCD, movimientosSoldadosCDArchivo
+    mRecuperarDato  8, movimientosSoldadosBI, movimientosSoldadosBIArchivo
+    mRecuperarDato  8, movimientosSoldadosBC, movimientosSoldadosBCArchivo
+    mRecuperarDato  8, movimientosSoldadosBD, movimientosSoldadosBDArchivo
   
-    mEscribirArchivo registroMatriz, 82, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
+    mEscribirArchivo registroMatriz, 226, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
     jmp cerrarArchivo
-    
+
 
 cerrarArchivo:
     mCerrarArchivo idArchivo
