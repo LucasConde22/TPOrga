@@ -986,6 +986,8 @@ verificarSiAmbosPuedenComer:
     soloCome1:
         mov rax, qword[direccionSalto2]
         mov qword[direccionSalto], rax
+        mov rax, [direccionComida2]
+        mov qword[direccionComida], rax
         mov rax, 0
         ret
 
