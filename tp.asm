@@ -6,7 +6,6 @@ section .data
     ; Mensajes a imprimir ----------
     modoEscritura db "wb", 0
     modoLectura db "rb", 0
-    nombreArchivo db "partidas.dat",0
     cSoldados db "X", 0
     cOficiales db "O", 0
     msgPersonalizar db "¿Desea personalizar la partida? (S/N): ", 0
@@ -26,7 +25,9 @@ section .data
     msgErrorIngreso db 0x1B,'[31m',"    ¡Ingreso inválido, intente nuevamente!",0x1B,'[0m', 0
     msgEstadoTablero db "Estado actual del tablero:", 0x0a, 0
     msgGanador db 0x1B,'[33m',"El ganador es %c ¡Felicidades!", 0x1B, '[0m', 0
-    msgErrorCargaPartida db "Todavia no hay una partida cargada. Por favor inicie una partida o termine", 0
+    msgPreguntaNombreArchivo db "¿Como quiere que se llame el archivo?: ", 0
+    msgPreguntaNombreArchivoCarga db "¿Como se llama el archivo que quiere cargar?: ", 0
+    msgErrorCargaPartida db "Todavia no hay una partida cargada con ese nombre. Por favor inicie una partida o termine", 0
     msgErrorApertura db 0x1B, '[1;31m',"Ocurrio un error al abrir un archivo", 0
     msgCargandoArchivo db 0x1B,'[32m',"Cargando partida anterior...", 0x1B, '[0m', 0
     msgGuardadoPartida db "Guardando datos de la partida....", 0
@@ -127,6 +128,7 @@ section .data
     archivoCargadoCorrectamente db 'S'
     archivoGuardadoCorrectamente db 'S'
     entradaValidaPersonalizacion db 'S'
+    entradaValidaArchivo db 'S'
     personajeMov db 'X', 0
     cantidadSoldados db 24
     posOficial1 db 6, 5
@@ -187,6 +189,7 @@ section .bss
     qAux resq 1
 
     idArchivo resq 1
+    nombreArchivo resb 100
 
     totalMovimientos resw 1
     soldadosCapturados resb 1
@@ -302,12 +305,19 @@ cargarPartida:
     cmp byte[buffer], 'S'
     jne personalizar ;  Si se quiere comenzar una partida de cero, se lleva a personalizar la misma
 cargarPartidaDesdeArchivo:
+    mImprimirPrintf msgPreguntaNombreArchivoCarga, 0
+    mLeer
+    call validarEntradaNombreArchivo
+    cmp byte[entradaValidaArchivo], 'N'
+    je entradaErroneaCarga
+    call almacenarNombre ; Almacena el nombre ingresado por el usuario en una variable para poder ser utilizado 
     sub  rsp, 8
     call cargarInfoArchivo
-    add rsp,8
+    add rsp, 8
     cmp byte[archivoCargadoCorrectamente], 'N'
     je personalizar
     jmp cicloJuego
+
 
 personalizar:
     ; Mostrar mensaje de personalización
@@ -317,7 +327,7 @@ personalizar:
     je cicloJuego
 
     ; Validar respuesta
-    call validarEntradaPersonalizacion ; Desarrolar al final!
+    call validarEntradaPersonalizacion
 
 cicloJuego:
     ; Mostrar tablero
@@ -469,9 +479,17 @@ ofrecerGuardado:
     call recibirSiNo ;Ya se ocupa de recibir un si o no en buffer
     cmp byte[buffer], 'N' ;Si el usuario no quiere guardar el progreso, el programa termina directamente
     je fin
-    call guardarProgreso
-    cmp byte[archivoGuardadoCorrectamente], 'N'
-    je guardarProgreso
+    preguntarNombre:
+        mImprimirPrintfModificado msgPreguntaNombreArchivo, 0, 0
+        mLeer
+        call validarEntradaNombreArchivo
+        cmp byte[entradaValidaArchivo], 'N'
+        je entradaErroneaGuardado ; Si el nombre ingresado por el usuario no es valido vuelve a preguntar
+        call almacenarNombre
+        call guardarProgreso
+        cmp byte[archivoGuardadoCorrectamente], 'N'
+        je guardarProgreso
+
 fin:
     ; Sale con una syscall para poder finalizar el programa incluso desde un llamado a función
     mImprimirPuts msgSaludoFinal
@@ -621,7 +639,6 @@ finCopiarFila:
     cmp r9b, 7
     jl copiarFila
     ret
-
 
 
 mostrarEstadisticas:
@@ -1102,7 +1119,27 @@ validarEntradaPersonalizacion:
             ret
 
 
+validarEntradaNombreArchivo:
+    cmp byte[buffer], 0
+    je  entradaInvalida
+    call contarLargoEntrada
+    validacionExtension:
+        mov rax, 0
+        loopValidacion:
+            cmp rax, rbx
+            jge entradaValidaNombreArchivo
+            cmp byte[buffer + rax], "."
+            je entradaInvalida
+            inc rax
+            jmp loopValidacion
 
+entradaInvalida:
+    mov byte[entradaValidaArchivo], "N"
+    ret
+
+entradaValidaNombreArchivo:
+    mov byte[entradaValidaArchivo], "S"
+    ret
 
 ; ********* Funciones de rotacion **********
 rotarCoordenadasDer:
@@ -1360,6 +1397,40 @@ convertirFilaColumna:
     mov [fila], ah
     sub al, 48
     mov [columna], al
+    ret
+
+
+almacenarNombre:
+    call contarLargoEntrada
+    mRecuperarDato rbx, buffer, nombreArchivo
+    mov byte[nombreArchivo + rbx], "."
+    mov byte[nombreArchivo + rbx + 1], "d"
+    mov byte[nombreArchivo + rbx + 2], "a"
+    mov byte[nombreArchivo + rbx + 3], "t"
+    mov byte[nombreArchivo + rbx + 4], 0
+    ret
+
+contarLargoEntrada:
+    mov rbx, 0
+    mov r9b, [buffer]
+    contarLargo:
+        cmp r9b, 0
+        je finLoop
+        mov r9b, [buffer + rbx + 1]
+        inc rbx
+        jmp contarLargo
+
+
+entradaErroneaGuardado:
+    mImprimirPuts msgErrorIngreso
+    jmp preguntarNombre
+
+
+entradaErroneaCarga:
+    mImprimirPuts msgErrorIngreso
+    jmp cargarPartidaDesdeArchivo
+
+finLoop:
     ret
 
 
