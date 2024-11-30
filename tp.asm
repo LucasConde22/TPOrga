@@ -23,8 +23,8 @@ section .data
         izquierda db "      3 - Rotar a izquierda", 0
 
     msgErrorIngreso db 0x1B,'[31m',"    ¡Ingreso inválido, intente nuevamente!",0x1B,'[0m', 0
-    msgEstadoTablero db "Estado actual del tablero:", 0x0a, 0
-    msgGanador db 0x1B,'[32m',"El ganador es %c ¡Felicidades!", 0x1B, '[0m', 0x0a, 0
+    msgEstadoTablero db  0x1B,'[1;35m',"Estado actual del tablero:", 0x1B, '[0m', 0x0a, 0
+    msgGanador db 0x1B,'[1;42m',"El ganador es %c ¡Felicidades!", 0x1B, '[0m', 0x0a, 0
     msgPreguntaNombreArchivo db "¿Como quiere que se llame el archivo?: ", 0
     msgPreguntaNombreArchivoCarga db "¿Como se llama el archivo que quiere cargar?: ", 0
     msgErrorCargaPartida db "Todavia no hay una partida cargada con ese nombre. Por favor inicie una partida o termine", 0
@@ -60,11 +60,13 @@ section .data
 
     msgPreguntaCargaArchivo db "¿Desea cargar la partida anterior? (S/N): ", 0
     msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
-    msgSaludoFinal db 0x1B,'[33m',"¡Gracias por jugar! ¡Hasta la próxima!", 0x1B, '[0m', 0
+    msgSaludoFinal db 0x1B,'[1;35m',"¡Gracias por jugar! ¡Hasta la próxima!", 0x1B, '[0m', 0x0a, 0
     saltoLinea db 0
     msgDebeComer db 0x1B, '[1;31m',"¡Cuidado, si uno de sus soldados omite una captura será retirado!", 0x1B, '[0m', 0
     msgPerdioOficial  db 0x1B, '[1;31m',"¡Omitiste una captura, perdiste un oficial!", 0x1B, '[0m', 0
     msgEncierroOficial  db 0x1B, '[1;31m',"¡El/los oficiales están encerrados!", 0x1B, '[0m', 0
+    msgNoHayOficiales  db 0x1B, '[1;31m',"¡No quedan oficiales!", 0x1B, '[0m', 0
+    msgNoHaySoldados  db 0x1B, '[1;31m',"¡No quedan oficiales!", 0x1B, '[0m', 0
     msgSoldadoCapturado db 0x1B,'[32m',"¡Soldado capturado!", 0x1B, '[0m', 0
 
     msgPedirMovimiento db "Ingrese el movimiento de %s a realizar: ", 0x0a, 0
@@ -527,6 +529,7 @@ omitioCaptura:
     mov byte[juegoTerminado], 'S'
     cmp byte[oficialesVivos], 0
     jne  seguirOmision
+    mImprimirPuts msgNoHayOficiales
     jmp saltoTJ
 
 seguirOmision:
@@ -817,6 +820,7 @@ chequearJuegoTerminado:
     ; Chequear si el juego terminó para los oficiales
     cmp byte[cantidadSoldados], 9 ; Si la cantidad de soldados es < a 9, el juego terminó
     jge juegoNoTermino
+    mImprimirPuts msgNoHaySoldados
     mov al, byte[cOficiales]
     mov byte[fichaGanador], al
     jmp juegoTermino
