@@ -1408,11 +1408,13 @@ guardarPosActualOficiales:
 
     mov al, byte[filaActual]
     mov ah, byte[columnaActual]
+    cmp byte[oficialEliminado], 1
+    je guardarPosOficial2
     mov bx, word[posOficial1]
     cmp bx, ax
     jne guardarPosOficial2
 
-    mov byte[posOficial1], dl ; OPTIMIZAR?
+    mov byte[posOficial1], dl
     mov byte[posOficial1 + 1], dh
     jmp gurdarPosActualOficialesFinalizo
 
