@@ -29,7 +29,7 @@ section .data
     msgPreguntaNombreArchivoCarga db "¿Como se llama el archivo que quiere cargar?: ", 0
     msgErrorCargaPartida db "Todavia no hay una partida cargada con ese nombre. Por favor inicie una partida o termine", 0
     msgErrorApertura db 0x1B, '[1;31m',"Ocurrio un error al abrir un archivo", 0
-    msgCargandoArchivo db 0x1B,'[32m',"Cargando partida anterior...", 0x1B, '[0m', 0
+    msgCargandoArchivo db 0x1B,'[32m',"Cargando partida...", 0x1B, '[0m', 0
     msgGuardadoPartida db "Guardando datos de la partida....", 0
     
     msgEstadisticas db 0x1B,'[32m',"-> Estadísticas del juego:", 0x1B, '[0m', 0
@@ -58,7 +58,7 @@ section .data
         msjCantSoldadosCapturados   db "    ● Capturas de soldados: %hhi", 0x0a, 0
         msjCantOficialesEliminados  db "    ● Oficiales eliminados: %hhi", 0x0a, 0
 
-    msgPreguntaCargaArchivo db "¿Desea cargar la partida anterior? (S/N): ", 0
+    msgPreguntaCargaArchivo db "¿Desea cargar una partida anterior? (S/N): ", 0
     msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
     msgSaludoFinal db 0x1B,'[1;35m',"¡Gracias por jugar! ¡Hasta la próxima!", 0x1B, '[0m', 0x0a, 0
     saltoLinea db 0
