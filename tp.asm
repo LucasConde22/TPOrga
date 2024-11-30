@@ -889,7 +889,7 @@ omitirEncierro1:
     jmp oficialEstaEncerrado
 
 %macro mChequeoRepetitivoDeAdyacentes 0
-    call chequearAdyacente
+    call chequearAdyacenteSoldadoOficial
     cmp rax, 1
     je oficialNoEncerrado
 %endmacro
@@ -948,6 +948,15 @@ chequearAdyacente:
     ; Chequea si un adyacente es soldado o celda no válida
     mov r8b, [cSoldados]
     call chequearAdyacenteGenerico
+    ret
+
+chequearAdyacenteSoldadoOficial:
+    ; Chequea si un adyacente es soldado, celda no válida u oficial
+    call chequearAdyacente
+    mov r8b, [cOficiales]
+    cmp r8b, [rbx]
+    je oficialEstaEncerrado
+    ret
 
 chequearAdyacenteGenerico:
     ; Chequea si un adyacente es igual a un valor dado
