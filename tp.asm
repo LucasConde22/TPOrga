@@ -892,51 +892,38 @@ omitirEncierro1:
     call chequearAdyacenteSoldadoOficial
     cmp rax, 1
     je oficialNoEncerrado
+    jl chequearSiguienteExterior ; Si la celda está ocupada y es una direccion válida, chequeo su siguiente exterior
+    cmp rax, 1
+    je oficialNoEncerrado
 %endmacro
 
 chequearOficialEncerrado:
     ; Chequea si un oficial está encerrado
+    mov cx, 0
     inc byte[buffer]
+    inc ch
     mChequeoRepetitivoDeAdyacentes
     inc byte[buffer + 1]
+    inc cl
     mChequeoRepetitivoDeAdyacentes
     dec byte[buffer]
+    dec ch
     mChequeoRepetitivoDeAdyacentes
     dec byte[buffer]
+    dec ch
     mChequeoRepetitivoDeAdyacentes
     dec byte[buffer + 1]
+    dec cl
     mChequeoRepetitivoDeAdyacentes
     dec byte[buffer + 1]
+    dec cl
     mChequeoRepetitivoDeAdyacentes
     inc byte[buffer]
+    inc ch
     mChequeoRepetitivoDeAdyacentes
     inc byte[buffer]
+    inc ch
     mChequeoRepetitivoDeAdyacentes
-    inc byte[buffer];;;;;;;;;;;;;;;
-    inc byte[buffer + 1]
-    mChequeoRepetitivoDeAdyacentes
-    inc byte[buffer + 1]
-    inc byte[buffer + 1]
-    mChequeoRepetitivoDeAdyacentes
-    dec byte[buffer]
-    dec byte[buffer]
-    mChequeoRepetitivoDeAdyacentes
-    dec byte[buffer]
-    dec byte[buffer]
-    mChequeoRepetitivoDeAdyacentes
-    dec byte[buffer + 1]
-    dec byte[buffer + 1]
-    mChequeoRepetitivoDeAdyacentes
-    dec byte[buffer + 1]
-    dec byte[buffer + 1]
-    mChequeoRepetitivoDeAdyacentes
-    inc byte[buffer]
-    inc byte[buffer]
-    mChequeoRepetitivoDeAdyacentes
-    inc byte[buffer]
-    inc byte[buffer]
-    mChequeoRepetitivoDeAdyacentes
-
     oficialEstaEncerrado:
         mov rax, 0
         ret
@@ -948,6 +935,21 @@ chequearAdyacente:
     ; Chequea si un adyacente es soldado o celda no válida
     mov r8b, [cSoldados]
     call chequearAdyacenteGenerico
+    ret
+
+
+chequearSiguienteExterior:
+    push rdx
+    push word[buffer]
+    push rax
+    
+    add byte[buffer], ch
+    add byte[buffer + 1], cl
+
+    call chequearAdyacenteSoldadoOficial
+    pop rax
+    pop word[buffer]
+    pop rdx
     ret
 
 chequearAdyacenteSoldadoOficial:
