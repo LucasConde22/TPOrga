@@ -953,6 +953,10 @@ chequearAdyacente:
 chequearAdyacenteSoldadoOficial:
     ; Chequea si un adyacente es soldado, celda no válida u oficial
     call chequearAdyacente
+    cmp rax, 1
+    je cmpOficial
+    ret
+cmpOficial:
     mov r8b, [cOficiales]
     cmp r8b, [rbx]
     je oficialEstaEncerrado
