@@ -1255,6 +1255,7 @@ personalizacion:
     elegirJugador:
         mImprimirPrintfModificado msgPrimeraJugada, cSoldados, cOficiales
         mLeer
+        call reescribirBufferAMayusculas
         cmp byte[buffer], "Q"
         je fin
         call validarEntradaJugador
