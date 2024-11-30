@@ -109,6 +109,7 @@ section .data
         posOficial1A times 2 db ' '
         posOficial2A times 2 db ' '
         oficialesVivosA db ' '
+        oficialEliminadoA db ' '
         soldadosLibresA db ' '
         f1A times 10 db ' '
         f2A times 10 db ' '
@@ -1465,7 +1466,7 @@ cargarInfoArchivo:
 
     leerArchivo:
 
-        mLeerArchivo registroMatriz, 226, idArchivo
+        mLeerArchivo registroMatriz, 227, idArchivo
 
         cmp rax, 0
         jle cerrarArchivo
@@ -1480,6 +1481,7 @@ cargarInfoArchivo:
         mRecuperarDato 2, posOficial1A, posOficial1
         mRecuperarDato 2, posOficial2A, posOficial2
         mRecuperarDato 1, oficialesVivosA, oficialesVivos
+        mRecuperarDato 1, oficialEliminadoA, oficialEliminado
         mRecuperarDato 1, soldadosLibresA, cantidadSoldados
         mRecuperarDato 10, f1A, f1
         mRecuperarDato 10, f2A, f2
@@ -1530,6 +1532,7 @@ guardarProgreso:
     mRecuperarDato 2, posOficial1, posOficial1A
     mRecuperarDato 2, posOficial2, posOficial2A
     mRecuperarDato 1, oficialesVivos, oficialesVivosA
+    mRecuperarDato 1, oficialEliminado, oficialEliminadoA
     mRecuperarDato 1, cantidadSoldados, soldadosLibresA
     mRecuperarDato 10, f1, f1A
     mRecuperarDato 10, f2, f2A
@@ -1557,7 +1560,7 @@ guardarProgreso:
     mRecuperarDato  8, movimientosSoldadosBC, movimientosSoldadosBCArchivo
     mRecuperarDato  8, movimientosSoldadosBD, movimientosSoldadosBDArchivo
   
-    mEscribirArchivo registroMatriz, 226, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
+    mEscribirArchivo registroMatriz, 227, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
     jmp cerrarArchivo
 
 
