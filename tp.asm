@@ -81,13 +81,13 @@ section .data
 
     ; ****** Tablero a imprimirse ********
     columnasImp db " | 1234567", 0    ; Casillas válidas:
-    f1          db "1|   XXX  ", 0x0A ;                   13 14 15
-    f2          db "2|   XXX  ", 0x0A ;                   23 24 25
-    f3          db "3| XXXXXXX", 0x0A ;             31 32 33 34 35 36 37
-    f4          db "4| XXXXXXX", 0    ;             41 42 43 44 45 46 47
-    f5          db "5| XX   XX", 0    ;             51 52 53 54 55 56 57
-    f6          db "6|     O  ", 0    ;                  63 64 65
-    f7          db "7|   O    ", 0    ;                  73 74 75
+    f1Imp          db "1|   XXX  ", 0x0A ;                   13 14 15
+    f2Imp          db "2|   XXX  ", 0x0A ;                   23 24 25
+    f3Imp          db "3| XXXXXXX", 0x0A ;             31 32 33 34 35 36 37
+    f4Imp          db "4| XXXXXXX", 0    ;             41 42 43 44 45 46 47
+    f5Imp          db "5| XX   XX", 0    ;             51 52 53 54 55 56 57
+    f6Imp          db "6|     O  ", 0    ;                  63 64 65
+    f7Imp          db "7|   O    ", 0    ;                  73 74 75
 
 
 
@@ -314,6 +314,39 @@ section .bss
     mCambiarColor gris
     mImprimirPuts %1 + 2
     mCambiarColor blanco
+%endmacro
+
+%macro mOficialABuffer 1
+    ; Macro que chequea si un oficial está encerrado
+    mov al, byte[%1]
+    add al, 48 ; Lo paso a ASCII, para que funcione correctamente la función de validación
+    mov byte[buffer], al ; Fila
+    mov al, byte[%1 + 1]
+    add al, 48
+    mov byte[buffer + 1], al ; Columna
+%endmacro
+
+%macro mOficialEncerrado 1
+    mOficialABuffer %1
+    call chequearOficialEncerrado
+    cmp rax, 1 ; Devuelve 1 si el oficial no está encerrado, 0 si lo está
+    je oficialNoEncerrado
+%endmacro
+
+
+%macro mChequeoRepetitivoDeAdyacentes 0
+    call chequearAdyacenteSoldadoOficial
+    cmp rax, 1
+    je oficialNoEncerrado
+    call chequearSiguienteExterior ; Si la celda está ocupada y es una direccion válida, chequeo su siguiente exterior
+    cmp rax, 1
+    je oficialNoEncerrado
+%endmacro
+
+%macro mComerRepetitivo 0
+    call puedeComerAux
+    cmp rax, 0
+    je seLoMorfa
 %endmacro
 
 ;********* Programa principal **********
@@ -573,7 +606,12 @@ omitioCapturaAux2:
     mov byte[potencialEliminado], 2
     jmp omitioCaptura
 
-;*********Funciones de muestreo**********
+
+
+
+; ***********************  Rutinas auxiliares ***************************
+
+;********* Funciones de muestreo **********
 mostrarTablero:
     ; Muestra el tablero en la terminal
     mImprimirPuts saltoLinea
@@ -584,47 +622,47 @@ mostrarTablero:
     mImprimirPuts f1Imp ; Imprime hasta la fila 4 inclusive
     add rsp, 16
     cmp byte[rotaciones], 0
-    jne imprimirTableroSinColores
+    jne imprimirTableroSinColores ; Para las rotaciones que no son 0 se muestra el tablero en blanco y negro (colores para las demás rotaciones quedan pendientes)
 
     mov rbx, 0
-imprimirTableroCiclo:
-    cmp rbx, 3 ; Los primeros 3 caracteres son si o si blancos
-    jl imprimirCaracter
+    imprimirTableroCiclo:
+        cmp rbx, 3 ; Los primeros 3 caracteres son si o si blancos
+        jl imprimirCaracter
 
-    mov al, byte[f5Imp + rbx]
-    cmp al, [cOficiales]
-    je cambiarBlanco ; Si la celda está dentro de las 'posiciones rojas' pero es un oficial, lo imprime en blanco
-    mCambiarColor rojo ; Si no, pasa a rojo
-    jmp contImprimirCaracter
+        mov al, byte[f5Imp + rbx]
+        cmp al, [cOficiales]
+        je cambiarBlanco ; Si la celda está dentro de las 'posiciones rojas' pero es un oficial, lo imprime en blanco
+        mCambiarColor rojo ; Si no, pasa a rojo
+        jmp contImprimirCaracter
 
-cambiarBlanco:
-    mCambiarColor blanco
-    jmp contImprimirCaracter
+    cambiarBlanco:
+        mCambiarColor blanco
+        jmp contImprimirCaracter
 
-contImprimirCaracter:
-    cmp rbx, 8
-    jge imprimirCaracter
-verificarGris:
-    cmp rbx, 5
-    jl imprimirCaracter
-    mCambiarColor gris ; Las columnas entre 5 y 7 son grises, sin importar el contenido
+    contImprimirCaracter:
+        cmp rbx, 8
+        jge imprimirCaracter
+    verificarGris:
+        cmp rbx, 5
+        jl imprimirCaracter
+        mCambiarColor gris ; Las columnas entre 5 y 7 son grises, sin importar el contenido
 
-imprimirCaracter:
-    mov al, byte[f5Imp + rbx]
-    mov [buffer], al
-    mov byte [buffer + 1], 0
-    push rbx
-    mImprimirPrintf buffer, 0
-    pop rbx
-    
-    inc rbx
-    cmp rbx, 10
-    jl imprimirTableroCiclo
+    imprimirCaracter:
+        mov al, byte[f5Imp + rbx]
+        mov [buffer], al
+        mov byte [buffer + 1], 0
+        push rbx
+        mImprimirPrintf buffer, 0
+        pop rbx
+        
+        inc rbx
+        cmp rbx, 10
+        jl imprimirTableroCiclo
 
-    mImprimirPuts blanco
-    mImprimirFilasGrises f6Imp
-    mImprimirFilasGrises f7Imp
-    ret
+        mImprimirPuts blanco
+        mImprimirFilasGrises f6Imp
+        mImprimirFilasGrises f7Imp
+        ret
 
 imprimirTableroSinColores:
     ; Imprime las filas restantes del tablero sin realizar ningún cambio de color (para el caso de rotaciones)
@@ -659,21 +697,21 @@ copiarFila:
     rotarVeces:
         call rotarCoordenadasDer
         loop rotarVeces
-finRotarVeces:
-    mov rbx, f1Imp
-    call encontrarDireccionCelda
+    finRotarVeces:
+        mov rbx, f1Imp
+        call encontrarDireccionCelda
 
-    mov r10b, [auxCopia]
-    mov byte[rbx], r10b
-    inc r8b
-    cmp r8b, 7
-    jl copiarFila
-finCopiarFila:
-    mov r8b, 0
-    inc r9b
-    cmp r9b, 7
-    jl copiarFila
-    ret
+        mov r10b, [auxCopia]
+        mov byte[rbx], r10b
+        inc r8b
+        cmp r8b, 7
+        jl copiarFila
+    finCopiarFila:
+        mov r8b, 0
+        inc r9b
+        cmp r9b, 7
+        jl copiarFila
+        ret
 
 
 mostrarEstadisticas:
@@ -723,7 +761,9 @@ mostrarGanador:
     call printf
     add rsp, 8
 
+
 ;********* Funciones de movimiento y chequeo de movimiento **********
+
 encontrarDireccionCelda:
     ; en rbx está la posicion de la primera celda en memoria del tablero
     ; Ya teniendo guardada la fila y columna, busca la dirección de memoria de la celda
@@ -742,7 +782,7 @@ encontrarDireccionCelda:
     add rbx, rax ; Finalmente, queda en rbx la dirección de memoria de la celda buscada
     ret
 
-chequearMovimientoCorrecto: ; MEJORAR FUNCIÓN USANDO MACROS
+chequearMovimientoCorrecto:
     ; Chequea si el movimiento es correcto, es decir, si el movimiento está dentro del rango de movimientos válidos
     mov al, byte[personajeMov]
     cmp al, byte[cSoldados]
@@ -821,6 +861,7 @@ chequearMovimientoCorrectoOficialesDebeComer:
     mov rax, 0
     ret
 
+;********* Funciones de chequeo de estado **********
 
 chequearJuegoTerminado:
     mov al, byte[cSoldados]
@@ -835,55 +876,38 @@ chequearJuegoTerminado:
     mov byte[fichaGanador], al
     jmp juegoTermino
 
-chequearJuegoTerminadoSoldados:
-    ; Chequear si el juego terminó para los soldados
-    call chequearOficialesEncerrados
-    cmp rax, 0 ; Devuelve 1 si los oficiales no están encerrados, 0 si lo están
-    je finJuegoOficialesEncerrados
+    chequearJuegoTerminadoSoldados:
+        ; Chequear si el juego terminó para los soldados
+        call chequearOficialesEncerrados
+        cmp rax, 0 ; Devuelve 1 si los oficiales no están encerrados, 0 si lo están
+        je finJuegoOficialesEncerrados
 
-    mov cl, 5
-    mov ch, 3
-cicloVerificacionTermino:
-    ; Verifica si la fortaleza se encuentra totalmente ocupada por soldados
-    mov byte[fila], cl
-    mov byte[columna], ch
-    mov rbx, f1
-    call encontrarDireccionCelda
-    mov al, [rbx]
-    cmp al, byte[cSoldados]
-    jne juegoNoTermino
+        mov cl, 5
+        mov ch, 3
+    cicloVerificacionTermino:
+        ; Verifica si la fortaleza se encuentra totalmente ocupada por soldados
+        mov byte[fila], cl
+        mov byte[columna], ch
+        mov rbx, f1
+        call encontrarDireccionCelda
+        mov al, [rbx]
+        cmp al, byte[cSoldados]
+        jne juegoNoTermino
 
-    inc ch
-    cmp ch, 6
-    jl cicloVerificacionTermino
-    mov ch, 3
-    inc cl
-    cmp cl, 8
-    jl cicloVerificacionTermino
-finJuegoOficialesEncerrados:
-    mImprimirPuts msgEncierroOficial
-juegoTermino:
-    mov byte[juegoTerminado], 'S'
+        inc ch
+        cmp ch, 6
+        jl cicloVerificacionTermino
+        mov ch, 3
+        inc cl
+        cmp cl, 8
+        jl cicloVerificacionTermino
+        finJuegoOficialesEncerrados:
+            mImprimirPuts msgEncierroOficial
+    juegoTermino:
+        mov byte[juegoTerminado], 'S'
+    juegoNoTermino:
+        ret
 
-juegoNoTermino:
-    ret
-
-%macro mOficialABuffer 1
-    ; Macro que chequea si un oficial está encerrado
-    mov al, byte[%1]
-    add al, 48 ; Lo paso a ASCII, para que funcione correctamente la función de validación
-    mov byte[buffer], al ; Fila
-    mov al, byte[%1 + 1]
-    add al, 48
-    mov byte[buffer + 1], al ; Columna
-%endmacro
-
-%macro mOficialEncerrado 1
-    mOficialABuffer %1
-    call chequearOficialEncerrado
-    cmp rax, 1 ; Devuelve 1 si el oficial no está encerrado, 0 si lo está
-    je oficialNoEncerrado
-%endmacro
 
 chequearOficialesEncerrados:
     ; Chequea si los oficiales están encerrados
@@ -896,16 +920,6 @@ chequearOficialesEncerrados:
 omitirEncierro1:
     mOficialEncerrado posOficial2
     jmp oficialEstaEncerrado
-
-%macro mChequeoRepetitivoDeAdyacentes 0
-    call chequearAdyacenteSoldadoOficial
-    cmp rax, 1
-    je oficialNoEncerrado
-    call chequearSiguienteExterior ; Si la celda está ocupada y es una direccion válida, chequeo su siguiente exterior
-    cmp rax, 1
-    je oficialNoEncerrado
-%endmacro
-
 chequearOficialEncerrado:
     ; Chequea si un oficial está encerrado
     mov cx, 0
@@ -1049,12 +1063,6 @@ verificarSiAmbosPuedenComer:
         mov rax, 0
         ret
 
-%macro mComerRepetitivo 0
-    call puedeComerAux
-    cmp rax, 0
-    je seLoMorfa
-%endmacro
-
 puedeComer:
     inc byte[buffer]
     mov r10b, 1
@@ -1117,7 +1125,6 @@ puedeComerAux:
 
 
 ;********* Funciones de validacion **********
-; Código que escribí pelotudeando, seguramente haya que cambiarlo:
 validarEntradaCelda:
     ; Valida que la celda ingresada sea válida (que pertenezca al tablero):
     call reescribirBufferAMayusculas ; Si se ingresa 'q' o 'Q', se termina el juego
@@ -1141,10 +1148,10 @@ validarEntradaCelda:
     je finRotarIngreso
     rotarIngreso:           ; Se rotan las coordenadas a izquierda para trabajar internamente con coordenadas "normales"
         call rotarCoordenadasIzq
-        loop rotarIngreso
-finRotarIngreso:
-    mov rax, 0
-    ret
+            loop rotarIngreso
+    finRotarIngreso:
+        mov rax, 0
+        ret
 
 validarEntradaPersonalizacion:
     call reescribirBufferAMayusculas
@@ -1154,9 +1161,8 @@ validarEntradaPersonalizacion:
 
     cmp ax, 78 ; N
     je retornoPersonalizacion
-    ret;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ret
     call errorIngreso
-    ;jmp personalizar Volver a preguntar???
 
     validarEntradaCeldaInterna:
         mov ah, [buffer] ; Fila
@@ -1196,6 +1202,7 @@ validarEntradaPersonalizacion:
 
 
 validarEntradaNombreArchivo:
+    ;Verifica que el nombre ingresado de archivo sea correcto (que no sea un ingreso nulo y que el nombre no venga con una extensión previa)
     cmp byte[buffer], 0
     je  entradaInvalida
     call contarLargoEntrada
@@ -1208,28 +1215,29 @@ validarEntradaNombreArchivo:
             je entradaInvalida
             inc rax
             jmp loopValidacion
-
-entradaInvalida:
-    mov byte[entradaValidaArchivo], "N"
-    ret
-
-entradaValidaNombreArchivo:
-    mov byte[entradaValidaArchivo], "S"
-    ret
+    entradaInvalida:
+        mov byte[entradaValidaArchivo], "N"
+        ret
+    entradaValidaNombreArchivo:
+        mov byte[entradaValidaArchivo], "S"
+        ret
 
 ; ********* Funciones de rotacion **********
 rotarCoordenadasDer:
-    mov rsi, fila        ; FilNueva = ColVieja
-    mov rdi, columna          ; ColNueva = abs(FilVieja - 7) + 1
+    ;Rota las coordenadas en las variables fila y comlumna y las rota una vez a derecha
+    mov rsi, fila               ; FilNueva = ColVieja
+    mov rdi, columna            ; ColNueva = abs(FilVieja - 7) + 1
     call rotarCoordenadas
     ret
 rotarCoordenadasIzq:
-    mov rsi, columna        ; ColNueva = FilaVieja
-    mov rdi, fila     ; FilNueva = abs(ColVieja - 7) + 1
+    ;Rota las coordenadas en las variables fila y comlumna y las rota una vez a derecha
+    mov rsi, columna            ; ColNueva = FilaVieja
+    mov rdi, fila               ; FilNueva = abs(ColVieja - 7) + 1
     call rotarCoordenadas
     ret
-rotarCoordenadas: ; En rsi y rdi cuentan con "punteros" a las dos coordenadas que se esperan
-                  ;rdi solo cambia de lugar, rsi cambia de lugar y se le hacen ciertas operaciones para eefctuar la rotación
+rotarCoordenadas: 
+    ; En rsi y rdi cuentan con "punteros" a las dos coordenadas que se esperan
+    ;rdi solo cambia de lugar, rsi cambia de lugar y se le hacen ciertas operaciones para eefctuar la rotación
     rotar:
         mov al, [rsi] 
         mov ah, [rdi]
@@ -1314,6 +1322,7 @@ entradaValida:
 ;********* Funciones de estadísticas **********
 
 actualizarCantidadMovimientos:
+    ;Actualiza las variables de movimiento de cada uno de los oficiales según corresponda
         push rax
         push rdx
         mov al, byte[cSoldados]
@@ -1338,6 +1347,7 @@ actualizarCantidadMovimientos:
         ret
 
 actualizarContadoresMovimientosDirecciones:
+    ; Incrementa en 1 el contador de la direccion a la que se movió el oficial correcpondiente
     push rdi
     push rsi
     push rcx
@@ -1368,7 +1378,8 @@ actualizarContadoresMovimientosDirecciones:
 
 
 
-guardarDesplazamiento: ; Guarda en movimiento dos caracteres dependiendo de cómo fue el desplazamiento
+guardarDesplazamiento:
+    ; Calcula y guarda en desplazamiento dos caracteres dependiendo de cómo fue el movimiento
         mov al, byte[filDestinoOriginal]
         sub al, byte[filInicioOriginal]
 
@@ -1400,6 +1411,7 @@ guardarDesplazamiento: ; Guarda en movimiento dos caracteres dependiendo de cóm
 
 
 actualizarCapturas:
+    ;Incrementa en 1 el contador de capturas del oficial que realizó la misma
     cmp  byte[oficialDesplazado], 1
     je actualizarCapturasOficial1
     inc byte[capturadosOficial2]
@@ -1410,7 +1422,7 @@ actualizarCapturas:
         ret
 
 
-;********* Funciones auxiliares **********
+;********* Otras funciones auxiliares **********
 guardarPosActualOficiales:
     ; Guarda la posición actual de los oficiales
     mov al, byte[cOficiales]
@@ -1482,38 +1494,7 @@ convertirFilaColumna:
     ret
 
 
-almacenarNombre:
-    call contarLargoEntrada
-    mRecuperarDato rbx, buffer, nombreArchivo
-    mov byte[nombreArchivo + rbx], "."
-    mov byte[nombreArchivo + rbx + 1], "d"
-    mov byte[nombreArchivo + rbx + 2], "a"
-    mov byte[nombreArchivo + rbx + 3], "t"
-    mov byte[nombreArchivo + rbx + 4], 0
-    ret
 
-contarLargoEntrada:
-    mov rbx, 0
-    mov r9b, [buffer]
-    contarLargo:
-        cmp r9b, 0
-        je finLoop
-        mov r9b, [buffer + rbx + 1]
-        inc rbx
-        jmp contarLargo
-
-
-entradaErroneaGuardado:
-    mImprimirPuts msgErrorIngreso
-    jmp preguntarNombre
-
-
-entradaErroneaCarga:
-    mImprimirPuts msgErrorIngreso
-    jmp cargarPartidaDesdeArchivo
-
-finLoop:
-    ret
 
 
 ;********* Funciones de guardado/carga de partida ***********
@@ -1629,6 +1610,40 @@ guardarProgreso:
 
 cerrarArchivo:
     mCerrarArchivo idArchivo
+    ret
+
+
+almacenarNombre:
+    call contarLargoEntrada
+    mRecuperarDato rbx, buffer, nombreArchivo
+    mov byte[nombreArchivo + rbx], "."
+    mov byte[nombreArchivo + rbx + 1], "d"
+    mov byte[nombreArchivo + rbx + 2], "a"
+    mov byte[nombreArchivo + rbx + 3], "t"
+    mov byte[nombreArchivo + rbx + 4], 0
+    ret
+
+contarLargoEntrada:
+    mov rbx, 0
+    mov r9b, [buffer]
+    contarLargo:
+        cmp r9b, 0
+        je finLoop
+        mov r9b, [buffer + rbx + 1]
+        inc rbx
+        jmp contarLargo
+
+
+entradaErroneaGuardado:
+    mImprimirPuts msgErrorIngreso
+    jmp preguntarNombre
+
+
+entradaErroneaCarga:
+    mImprimirPuts msgErrorIngreso
+    jmp cargarPartidaDesdeArchivo
+
+finLoop:
     ret
 
 ;********* Funciones de error **********
