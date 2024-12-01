@@ -468,7 +468,7 @@ saltoDobleOpcion: ; Si ambos oficiales pueden comer, se le da la opción al juga
     jne  segundaOpcion
     mov rcx, [direccionOficial]
     cmp rcx, [qAux]
-    je omitioCapturaAux
+    je segundaOpcion
     jmp captura
 segundaOpcion:
     cmp rbx, [direccionSalto2]
