@@ -59,10 +59,10 @@ section .data
     msgPerdioOficial  db 0x1B, '[1;31m',"¡Omitiste una captura, perdiste un oficial!", 0x1B, '[0m', 0
     msgEncierroOficial  db 0x1B, '[1;31m',"¡El/los oficiales están encerrados!", 0x1B, '[0m', 0
     msgNoHayOficiales  db 0x1B, '[1;31m',"¡No quedan oficiales!", 0x1B, '[0m', 0
-    msgNoHaySoldados  db 0x1B, '[1;31m',"¡No quedan oficiales!", 0x1B, '[0m', 0
+    msgNoHaySoldados  db 0x1B, '[1;31m',"¡No quedan soldados!", 0x1B, '[0m', 0
     msgSoldadoCapturado db 0x1B,'[32m',"¡Soldado capturado!", 0x1B, '[0m', 0
 
-    msgPedirMovimiento db "Ingrese el movimiento de %s a realizar: ", 0x0a, 0
+    msgPedirMovimiento db "Ingrese el movimiento de %s a realizar (Q/q para salir): ", 0x0a, 0
     msgFicha db "    ● Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
     msgDestino db "    ● Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
 
@@ -92,7 +92,7 @@ section .data
     f4Imp       db "4| XXXXXXX", 0    ;             41 42 43 44 45 46 47
     f5Imp       db "5| XX   XX", 0    ;             51 52 53 54 55 56 57
     f6Imp       db "6|     O  ", 0    ;                  63 64 65
-    f7Imp       db "7|   O    ", 0    ;                   73 74 75
+    f7Imp       db "7|   O    ", 0    ;                  73 74 75
 
 
 
@@ -114,24 +114,26 @@ section .data
         f5A times 10 db ' '
         f6A times 10 db ' '
         f7A times 10 db ' '
-        movimientosOficial1Archivo   times 8 db ' '        
-        movimientosOficial1AIArchivo times 8 db ' '   
-        movimientosOficial1ACArchivo times 8 db ' '      
-        movimientosOficial1ADArchivo times 8 db ' '               
-        movimientosOficial1CIArchivo times 8 db ' '    
-        movimientosOficial1CDArchivo times 8 db ' '    
-        movimientosOficial1BIArchivo times 8 db ' '    
-        movimientosOficial1BCArchivo times 8 db ' ' 
-        movimientosOficial1BDArchivo times 8 db ' '
-        movimientosOficial2Archivo    times 8 db ' '                  
-        movimientosOficial2AIArchivo  times 8 db ' '    
-        movimientosOficial2ACArchivo  times 8 db ' '       
-        movimientosOficial2ADArchivo  times 8 db ' '              
-        movimientosOficial2CIArchivo  times 8 db ' '   
-        movimientosOficial2CDArchivo  times 8 db ' '    
-        movimientosOficial2BIArchivo  times 8 db ' '    
-        movimientosOficial2BCArchivo  times 8 db ' ' 
-        movimientosOficial2BDArchivo  times 8 db ' '
+        capturadosOficial1Archivo       db ' '
+        capturadosOficial2Archivo       db ' '
+        movimientosOficial1Archivo      times 8 db ' '        
+        movimientosOficial1AIArchivo    times 8 db ' '   
+        movimientosOficial1ACArchivo    times 8 db ' '      
+        movimientosOficial1ADArchivo    times 8 db ' '               
+        movimientosOficial1CIArchivo    times 8 db ' '    
+        movimientosOficial1CDArchivo    times 8 db ' '    
+        movimientosOficial1BIArchivo    times 8 db ' '    
+        movimientosOficial1BCArchivo    times 8 db ' ' 
+        movimientosOficial1BDArchivo    times 8 db ' '
+        movimientosOficial2Archivo      times 8 db ' '                  
+        movimientosOficial2AIArchivo    times 8 db ' '    
+        movimientosOficial2ACArchivo    times 8 db ' '       
+        movimientosOficial2ADArchivo    times 8 db ' '              
+        movimientosOficial2CIArchivo    times 8 db ' '   
+        movimientosOficial2CDArchivo    times 8 db ' '    
+        movimientosOficial2BIArchivo    times 8 db ' '    
+        movimientosOficial2BCArchivo    times 8 db ' ' 
+        movimientosOficial2BDArchivo    times 8 db ' '
 
     ;Variables de estado ---------
     
@@ -153,6 +155,10 @@ section .data
     oficialEliminado db 0
     oficialDesplazado db 0
 
+    totalMovimientos dw 0
+    capturadosOficial1 db 0
+    capturadosOficial2 db 0
+    oficialesEliminados db 0
 
     ;Contadores de movimientos ---
     filInicioOriginal      db 0
@@ -161,7 +167,7 @@ section .data
     colDestinoOriginal      db 0
     desplazamiento          db '**'
     movimientosPosibles     db 'AI','AC','AD','CI','CD','BI','BC','BD'
-    
+
     movimientosOficial1  dq 0    ;   AI|AC|AD     
     movimientosOficial1AI dq 0    ;   CI|X |CD
     movimientosOficial1AC dq 0    ;   BI|BC|BD     
@@ -206,10 +212,7 @@ section .bss
     idArchivo resq 1
     nombreArchivo resb 100
 
-    totalMovimientos resw 1
-    capturadosOficial1 resb 1
-    capturadosOficial2 resb 1
-    oficialesEliminados resb 1
+    
 
 ; ************ Macros ************ ;
 %macro mImprimirPrintf 2
@@ -1524,7 +1527,7 @@ cargarInfoArchivo:
 
     leerArchivo:
 
-        mLeerArchivo registroMatriz, 227, idArchivo
+        mLeerArchivo registroMatriz, 229, idArchivo
 
         cmp rax, 0
         jle cerrarArchivo
@@ -1546,6 +1549,8 @@ cargarInfoArchivo:
         mRecuperarDato 10, f5A, f5
         mRecuperarDato 10, f6A, f6
         mRecuperarDato 10, f7A, f7
+        mRecuperarDato  1, capturadosOficial1Archivo,    capturadosOficial1
+        mRecuperarDato  1, capturadosOficial2Archivo,    capturadosOficial2
         mRecuperarDato  8, movimientosOficial1Archivo,   movimientosOficial1 
         mRecuperarDato  8, movimientosOficial1AIArchivo, movimientosOficial1AI
         mRecuperarDato  8, movimientosOficial1ACArchivo, movimientosOficial1AC
@@ -1595,6 +1600,8 @@ guardarProgreso:
     mRecuperarDato 10, f5, f5A
     mRecuperarDato 10, f6, f6A
     mRecuperarDato 10, f7, f7A
+    mRecuperarDato  1, capturadosOficial1,    capturadosOficial1Archivo 
+    mRecuperarDato  1, capturadosOficial2,    capturadosOficial2Archivo 
     mRecuperarDato  8, movimientosOficial1,   movimientosOficial1Archivo 
     mRecuperarDato  8, movimientosOficial1AI, movimientosOficial1AIArchivo
     mRecuperarDato  8, movimientosOficial1AC, movimientosOficial1ACArchivo
@@ -1614,7 +1621,7 @@ guardarProgreso:
     mRecuperarDato  8, movimientosOficial2BC, movimientosOficial2BCArchivo
     mRecuperarDato  8, movimientosOficial2BD, movimientosOficial2BDArchivo
   
-    mEscribirArchivo registroMatriz, 227, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
+    mEscribirArchivo registroMatriz, 229, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
     jmp cerrarArchivo
 
 
