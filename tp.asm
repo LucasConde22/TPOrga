@@ -4,38 +4,33 @@ extern printf, puts, gets, fwrite, fread, fopen, fclose
 section .data
 
     ; Mensajes a imprimir ----------
-    modoEscritura db "wb", 0
-    modoLectura db "rb", 0
-    cSoldados db "X", 0
-    cOficiales db "O", 0
-    msgPersonalizar db "¿Desea personalizar la partida? (S/N): ", 0
-    msgPersonalizarSoldados db "    ● ¿Que simbolo usaran los soldados?: ", 0
-    msgPersonalizarOficiales db "    ● ¿Que simbolo usaran los oficiales?: ", 0
-    msgPrimeraJugada db "    ● ¿Quien quiere que comience la partida %s o %s ?: ", 0
+    msgPersonalizar                 db "¿Desea personalizar la partida? (S/N): ", 0
+    msgPersonalizarSoldados         db "    ● ¿Que simbolo usaran los soldados?: ", 0
+    msgPersonalizarOficiales        db "    ● ¿Que simbolo usaran los oficiales?: ", 0
+    msgPrimeraJugada                db "    ● ¿Quien quiere que comience la partida %s o %s ?: ", 0
 
-    msgRotacion db "    ● Ingrese un comando para rotar el tablero", 0
-    msgIngresoComando db "    > ", 0
-
+    msgRotacion                     db "    ● Ingrese un comando para rotar el tablero", 0
+    msgIngresoComando               db "    > ", 0
     comandosRotacion:
-        sinRotacion db "      0 - Sin rotacion", 0
-        derecha db "      1 - Rotar a derecha", 0
-        arriba db "      2 - Rotar arriba", 0
-        izquierda db "      3 - Rotar a izquierda", 0
+        sinRotacion                 db "      0 - Sin rotacion", 0
+        derecha                     db "      1 - Rotar a derecha", 0
+        arriba                      db "      2 - Rotar arriba", 0
+        izquierda                   db "      3 - Rotar a izquierda", 0
 
-    msgErrorIngreso db 0x1B,'[31m',"    ¡Ingreso inválido, intente nuevamente!",0x1B,'[0m', 0
-    msgEstadoTablero db  0x1B,'[1;35m',"Estado actual del tablero:", 0x1B, '[0m', 0x0a, 0
-    msgGanador db 0x1B,'[1;42m',"El ganador es %c ¡Felicidades!", 0x1B, '[0m', 0x0a, 0
-    msgPreguntaNombreArchivo db "¿Como quiere que se llame el archivo?: ", 0
-    msgPreguntaNombreArchivoCarga db "¿Como se llama el archivo que quiere cargar?: ", 0
-    msgErrorCargaPartida db "Todavia no hay una partida cargada con ese nombre. Por favor inicie una partida o termine", 0
-    msgErrorApertura db 0x1B, '[1;31m',"Ocurrio un error al abrir un archivo", 0
-    msgCargandoArchivo db 0x1B,'[32m',"Cargando partida...", 0x1B, '[0m', 0
-    msgGuardadoPartida db "Guardando datos de la partida....", 0
+    msgErrorIngreso                 db 0x1B,'[31m',"    ¡Ingreso inválido, intente nuevamente!",0x1B,'[0m', 0
+    msgEstadoTablero                db  0x1B,'[1;35m',"Estado actual del tablero:", 0x1B, '[0m', 0x0a, 0
+    msgGanador                      db 0x1B,'[1;42m',"El ganador es %c ¡Felicidades!", 0x1B, '[0m', 0x0a, 0
+    msgPreguntaNombreArchivo        db "¿Como quiere que se llame el archivo?: ", 0
+    msgPreguntaNombreArchivoCarga   db "¿Como se llama el archivo que quiere cargar?: ", 0
+    msgErrorCargaPartida            db "Todavia no hay una partida cargada con ese nombre. Por favor inicie una partida o termine", 0
+    msgErrorApertura                db 0x1B, '[1;31m',"Ocurrio un error al abrir un archivo", 0
+    msgCargandoArchivo              db 0x1B,'[32m',"Cargando partida...", 0x1B, '[0m', 0
+    msgGuardadoPartida              db "Guardando datos de la partida....", 0
     
-    msgEstadisticas db 0x1B,'[32m',"-> Estadísticas del juego:", 0x1B, '[0m', 0
-        msjCantidadMovTotales       db "    ● Total de movimientos: %hhi", 0x0a, 0
+    msgEstadisticas                 db 0x1B,'[32m',"-> Estadísticas del juego:", 0x1B, '[0m', 0
+        msjCantidadMovTotales               db "    ● Total de movimientos de los oficiales: %hhi", 0x0a, 0
         
-        msjCantidadMovOficial1           db "    ● Movimientos totales del oficial 1: %hhi", 0x0a, 0
+        msjCantidadMovOficial1              db "    ● Movimientos totales del oficial 1: %hhi", 0x0a, 0
         msjCantidadMovOficialesDetalleAI    db "            > Hacia diagonal superior izquierda:    %li", 0x0a, 0
         msjCantidadMovOficialesDetalleAC    db "            > Hacia arriba:                         %li", 0x0a, 0
         msjCantidadMovOficialesDetalleAD    db "            > Hacia diagonal superior derecha:      %li", 0x0a, 0
@@ -45,75 +40,79 @@ section .data
         msjCantidadMovOficialesDetalleBC    db "            > Hacia abajo:                          %li", 0x0a, 0
         msjCantidadMovOficialesDetalleBD    db "            > Hacia diagonal inferior derecha:      %li", 0x0a, 0
         
-        msjCantidadMovOficial2             db "    ● Movimientos totales del oficial 2: %hhi", 0x0a, 0
+        msjCantidadMovOficial2              db "    ● Movimientos totales del oficial 2: %hhi", 0x0a, 0
         
-        msjCantSoldadosCapturados1   db "    ● Capturas de soldados oficial 1: %hhi", 0x0a, 0
-        msjCantSoldadosCapturados2   db "    ● Capturas de soldados oficial 2: %hhi", 0x0a, 0
-        msjCantOficialesEliminados  db "    ● Oficiales eliminados: %hhi", 0x0a, 0
+        msjCantSoldadosCapturados1          db "    ● Capturas de soldados oficial 1: %hhi", 0x0a, 0
+        msjCantSoldadosCapturados2          db "    ● Capturas de soldados oficial 2: %hhi", 0x0a, 0
+        msjCantOficialesEliminados          db "    ● Oficiales eliminados: %hhi", 0x0a, 0
 
-    msgPreguntaCargaArchivo db "¿Desea cargar una partida anterior? (S/N): ", 0
-    msgPreguntaGuardadoArchivo db "¿Desea guardar la partida anterior? (S/N): ", 0
-    msgSaludoFinal db 0x1B,'[1;35m',"¡Gracias por jugar! ¡Hasta la próxima!", 0x1B, '[0m', 0x0a, 0
-    saltoLinea db 0
-    msgDebeComer db 0x1B, '[1;31m',"¡Cuidado, si uno de sus soldados omite una captura será retirado!", 0x1B, '[0m', 0
-    msgPerdioOficial  db 0x1B, '[1;31m',"¡Omitiste una captura, perdiste un oficial!", 0x1B, '[0m', 0
-    msgEncierroOficial  db 0x1B, '[1;31m',"¡El/los oficiales están encerrados!", 0x1B, '[0m', 0
-    msgNoHayOficiales  db 0x1B, '[1;31m',"¡No quedan oficiales!", 0x1B, '[0m', 0
-    msgNoHaySoldados  db 0x1B, '[1;31m',"¡No quedan soldados!", 0x1B, '[0m', 0
-    msgSoldadoCapturado db 0x1B,'[32m',"¡Soldado capturado!", 0x1B, '[0m', 0
+    msgPreguntaCargaArchivo                 db "¿Desea cargar una partida anterior? (S/N): ", 0
+    msgPreguntaGuardadoArchivo              db "¿Desea guardar la partida anterior? (S/N): ", 0
+    msgSaludoFinal                          db 0x1B,'[1;35m',"¡Gracias por jugar! ¡Hasta la próxima!", 0x1B, '[0m', 0x0a, 0
+    msgDebeComer                            db 0x1B, '[1;31m',"¡Cuidado, si uno de sus soldados omite una captura será retirado!", 0x1B, '[0m', 0
+    msgPerdioOficial                        db 0x1B, '[1;31m',"¡Omitiste una captura, perdiste un oficial!", 0x1B, '[0m', 0
+    msgEncierroOficial                      db 0x1B, '[1;31m',"¡El/los oficiales están encerrados!", 0x1B, '[0m', 0
+    msgNoHayOficiales                       db 0x1B, '[1;31m',"¡No quedan oficiales!", 0x1B, '[0m', 0
+    msgNoHaySoldados                        db 0x1B, '[1;31m',"¡No quedan soldados!", 0x1B, '[0m', 0
+    msgSoldadoCapturado                     db 0x1B,'[32m',"¡Soldado capturado!", 0x1B, '[0m', 0
+    saltoLinea                              db 0
 
-    msgPedirMovimiento db "Ingrese el movimiento de %s a realizar (Q/q para salir): ", 0x0a, 0
-    msgFicha db "    ● Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
-    msgDestino db "    ● Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
+    msgPedirMovimiento                      db "Ingrese el movimiento de %s a realizar (Q/q para salir): ", 0x0a, 0
+    msgFicha                                db "    ● Ubicación actual de la ficha a mover (formato: FilCol, ej. '34'): ", 0
+    msgDestino                              db "    ● Ubicación destino de la ficha a mover (formato: FilCol, ej. '35'): ", 0
 
     ; Auxiliares de impresión ----------
-    formato db "%hhi", 0
+    formato         db "%hhi", 0
 
-    rojo db 0x1B, '[1;31m', 0
-    blanco db 0x1B, '[0m', 0
-    gris db 0x1B, '[1;90m', 0
+    rojo            db 0x1B, '[1;31m', 0
+    blanco          db 0x1B, '[0m', 0
+    gris            db 0x1B, '[1;90m', 0
 
     ; ****** Tablero interno ********
 
     columnas    db " | 1234567", 0
-    f1          db "1|    X   ", 0x0A
-    f2          db "2|     X  ", 0x0A
-    f3          db "3| X    XX", 0x0A
-    f4          db "4| XXX X X", 0
-    f5          db "5|  X XXXX", 0
-    f6          db "6|   XXO  ", 0
-    f7          db "7|   OXX  ", 0
+    f1          db "1|   XXX  ", 0x0A
+    f2          db "2|   XXX  ", 0x0A
+    f3          db "3| XXXXXXX", 0x0A
+    f4          db "4| XXXXXXX", 0
+    f5          db "5| XX   XX", 0
+    f6          db "6|     O  ", 0
+    f7          db "7|   O    ", 0
 
     ; ****** Tablero a imprimirse ********
     columnasImp db " | 1234567", 0    ; Casillas válidas:
-    f1Imp       db "1|    X   ", 0x0A ;                   13 14 15
-    f2Imp       db "2|     X  ", 0x0A ;                   23 24 25
-    f3Imp       db "3| X    XX", 0x0A ;             31 32 33 34 35 36 37
-    f4Imp       db "4| XXX X X", 0    ;             41 42 43 44 45 46 47
-    f5Imp       db "5|  X XXXX", 0    ;             51 52 53 54 55 56 57
-    f6Imp       db "6|   XXO  ", 0    ;                  63 64 65
-    f7Imp       db "7|   OXX  ", 0    ;                  73 74 75
+    f1          db "1|   XXX  ", 0x0A ;                   13 14 15
+    f2          db "2|   XXX  ", 0x0A ;                   23 24 25
+    f3          db "3| XXXXXXX", 0x0A ;             31 32 33 34 35 36 37
+    f4          db "4| XXXXXXX", 0    ;             41 42 43 44 45 46 47
+    f5          db "5| XX   XX", 0    ;             51 52 53 54 55 56 57
+    f6          db "6|     O  ", 0    ;                  63 64 65
+    f7          db "7|   O    ", 0    ;                  73 74 75
 
 
 
     ; Auxiliares de guardado ----------
+
+    modoEscritura                   db "wb", 0
+    modoLectura                     db "rb", 0
+
     registroMatriz:
-        fichaSoldado db ' '
-        fichaOficial db ' '
-        jugadaActual db ' '
-        rotacionesArchivo db ' '
-        posOficial1A times 2 db ' '
-        posOficial2A times 2 db ' '
-        oficialesVivosA db ' '
-        oficialEliminadoA db ' '
-        soldadosLibresA db ' '
-        f1A times 10 db ' '
-        f2A times 10 db ' '
-        f3A times 10 db ' '
-        f4A times 10 db ' '
-        f5A times 10 db ' '
-        f6A times 10 db ' '
-        f7A times 10 db ' '
+        fichaSoldado                    db ' '
+        fichaOficial                    db ' '
+        jugadaActual                    db ' '
+        rotacionesArchivo               db ' '
+        posOficial1A                    times 2 db ' '
+        posOficial2A                    times 2 db ' '
+        oficialesVivosA                 db ' '
+        oficialEliminadoA               db ' '
+        soldadosLibresA                 db ' '
+        f1A                             times 10 db ' '
+        f2A                             times 10 db ' '
+        f3A                             times 10 db ' '
+        f4A                             times 10 db ' '
+        f5A                             times 10 db ' '
+        f6A                             times 10 db ' '
+        f7A                             times 10 db ' '
         capturadosOficial1Archivo       db ' '
         capturadosOficial2Archivo       db ' '
         movimientosOficial1Archivo      times 8 db ' '        
@@ -137,80 +136,82 @@ section .data
 
     ;Variables de estado ---------
     
-    rotaciones db 0
-    juegoTerminado db 'N'
-    fichaGanador db 'X' ; Este valor va a ser pisado luego de terminada la partida
-    archivoCargadoCorrectamente db 'S'
-    archivoGuardadoCorrectamente db 'S'
-    entradaValidaPersonalizacion db 'S'
-    entradaValidaArchivo db 'S'
-    personajeMov db 'X', 0
-    cantidadSoldados db 24
-    posOficial1 db 6, 5
-    posOficial2 db 7, 3
-    debeCapturar db 'N'
-    ambosComen db 'N'
-    capturo db 'N'
-    oficialesVivos db 2
-    oficialEliminado db 0
-    oficialDesplazado db 0
+    cSoldados                                   db "X", 0
+    cOficiales                                  db "O", 0
+    rotaciones                                  db 0
+    juegoTerminado                              db 'N'
+    fichaGanador                                db 'X' ; Este valor va a ser pisado luego de terminada la partida
+    archivoCargadoCorrectamente                 db 'S'
+    archivoGuardadoCorrectamente                db 'S'
+    entradaValidaPersonalizacion                db 'S'
+    entradaValidaArchivo                        db 'S'
+    personajeMov                                db 'X', 0
+    cantidadSoldados                            db 24
+    posOficial1                                 db 6, 5
+    posOficial2                                 db 7, 3
+    debeCapturar                                db 'N'
+    ambosComen                                  db 'N'
+    capturo                                     db 'N'
+    oficialesVivos                              db 2
+    oficialEliminado                            db 0
+    oficialDesplazado                           db 0
 
-    totalMovimientos dw 0
-    capturadosOficial1 db 0
-    capturadosOficial2 db 0
-    oficialesEliminados db 0
+    totalMovimientos                            dw 0
+    capturadosOficial1                          db 0
+    capturadosOficial2                          db 0
+    oficialesEliminados                         db 0
 
     ;Contadores de movimientos ---
-    filInicioOriginal      db 0
-    filDestinoOriginal      db 0
-    colInicioOriginal      db 0
-    colDestinoOriginal      db 0
-    desplazamiento          db '**'
-    movimientosPosibles     db 'AI','AC','AD','CI','CD','BI','BC','BD'
+    filInicioOriginal                           db 0
+    filDestinoOriginal                          db 0
+    colInicioOriginal                           db 0
+    colDestinoOriginal                          db 0
+    desplazamiento                              db '**'
+    movimientosPosibles                         db 'AI','AC','AD','CI','CD','BI','BC','BD'
 
-    movimientosOficial1  dq 0    ;   AI|AC|AD     
-    movimientosOficial1AI dq 0    ;   CI|X |CD
-    movimientosOficial1AC dq 0    ;   BI|BC|BD     
-    movimientosOficial1AD dq 0    ;            
-    movimientosOficial1CI dq 0    ;   A: Arriba      B: Bajo
-    movimientosOficial1CD dq 0    ;   C: Centro      I: Izquierda    
-    movimientosOficial1BI dq 0    ;   D: Derecha     (X punto de referencia)
-    movimientosOficial1BC dq 0 
-    movimientosOficial1BD dq 0
+    movimientosOficial1                         dq 0    ;   AI|AC|AD     
+    movimientosOficial1AI                       dq 0    ;   CI|X |CD
+    movimientosOficial1AC                       dq 0    ;   BI|BC|BD     
+    movimientosOficial1AD                       dq 0    ;            
+    movimientosOficial1CI                       dq 0    ;   A: Arriba      B: Bajo
+    movimientosOficial1CD                       dq 0    ;   C: Centro      I: Izquierda    
+    movimientosOficial1BI                       dq 0    ;   D: Derecha     (X punto de referencia)
+    movimientosOficial1BC                       dq 0 
+    movimientosOficial1BD                       dq 0
 
-    movimientosOficial2 dq 0                  
-    movimientosOficial2AI dq 0    
-    movimientosOficial2AC dq 0       
-    movimientosOficial2AD dq 0              
-    movimientosOficial2CI dq 0   
-    movimientosOficial2CD dq 0    
-    movimientosOficial2BI dq 0    
-    movimientosOficial2BC dq 0 
-    movimientosOficial2BD dq 0 
+    movimientosOficial2                         dq 0                  
+    movimientosOficial2AI                       dq 0    
+    movimientosOficial2AC                       dq 0       
+    movimientosOficial2AD                       dq 0              
+    movimientosOficial2CI                       dq 0   
+    movimientosOficial2CD                       dq 0    
+    movimientosOficial2BI                       dq 0    
+    movimientosOficial2BC                       dq 0 
+    movimientosOficial2BD                       dq 0 
 
 
 section .bss
-    fila resb 1
-    columna resb 1
-    direccionSalto resq 1 ; Dirección de celda a la que se debe saltar
-    direccionSalto2 resq 1 ; Dirección de celda alternativa a la que se puede saltar si los dos oficiales pueden comer
-    direccionComida resq 1 ; Dirección de celda con soldado a ser eliminado
-    direccionComida2 resq 1; Dirección de celda alternativa con soldado a ser eliminado si los dos oficiales pueden comer
-    direccionOficial resq 1 ; Dirección de celda con oficial que debe capturar
-    potencialEliminado resb 1 ; Número de oficial que se eliminará si omite la captura
+    fila                                        resb 1
+    columna                                     resb 1
+    direccionSalto                              resq 1 ; Dirección de celda a la que se debe saltar
+    direccionSalto2                             resq 1 ; Dirección de celda alternativa a la que se puede saltar si los dos oficiales pueden comer
+    direccionComida                             resq 1 ; Dirección de celda con soldado a ser eliminado
+    direccionComida2                            resq 1; Dirección de celda alternativa con soldado a ser eliminado si los dos oficiales pueden comer
+    direccionOficial                            resq 1 ; Dirección de celda con oficial que debe capturar
+    potencialEliminado                          resb 1 ; Número de oficial que se eliminará si omite la captura
 
-    filaActual resb 1
-    columnaActual resb 1
-    filaDestino resb 1
-    columnaDestino resb 1
+    filaActual                                  resb 1
+    columnaActual                               resb 1
+    filaDestino                                 resb 1
+    columnaDestino                              resb 1
 
-    auxCopia resb 1
+    auxCopia                                    resb 1
 
-    buffer resb 101
-    qAux resq 1
+    buffer                                      resb 101
+    qAux                                        resq 1
 
-    idArchivo resq 1
-    nombreArchivo resb 100
+    idArchivo                                   resq 1
+    nombreArchivo                               resb 100
 
     
 
