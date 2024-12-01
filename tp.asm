@@ -900,7 +900,7 @@ omitirEncierro1:
     call chequearAdyacenteSoldadoOficial
     cmp rax, 1
     je oficialNoEncerrado
-    jl chequearSiguienteExterior ; Si la celda está ocupada y es una direccion válida, chequeo su siguiente exterior
+    call chequearSiguienteExterior ; Si la celda está ocupada y es una direccion válida, chequeo su siguiente exterior
     cmp rax, 1
     je oficialNoEncerrado
 %endmacro
@@ -949,13 +949,11 @@ chequearAdyacente:
 chequearSiguienteExterior:
     push rdx
     push word[buffer]
-    push rax
     
     add byte[buffer], ch
     add byte[buffer + 1], cl
 
     call chequearAdyacenteSoldadoOficial
-    pop rax
     pop word[buffer]
     pop rdx
     ret
