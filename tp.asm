@@ -35,7 +35,7 @@ section .data
     msgEstadisticas db 0x1B,'[32m',"-> Estadísticas del juego:", 0x1B, '[0m', 0
         msjCantidadMovTotales       db "    ● Total de movimientos: %hhi", 0x0a, 0
         
-        msjCantidadMovOficiales             db "    ● Movimientos totales de los oficiales: %hhi", 0x0a, 0
+        msjCantidadMovOficial1           db "    ● Movimientos totales del oficial 1: %hhi", 0x0a, 0
         msjCantidadMovOficialesDetalleAI    db "            > Hacia diagonal superior izquierda:    %li", 0x0a, 0
         msjCantidadMovOficialesDetalleAC    db "            > Hacia arriba:                         %li", 0x0a, 0
         msjCantidadMovOficialesDetalleAD    db "            > Hacia diagonal superior derecha:      %li", 0x0a, 0
@@ -45,17 +45,10 @@ section .data
         msjCantidadMovOficialesDetalleBC    db "            > Hacia abajo:                          %li", 0x0a, 0
         msjCantidadMovOficialesDetalleBD    db "            > Hacia diagonal inferior derecha:      %li", 0x0a, 0
         
-        msjCantidadMovSoldados              db "    ● Movimientos totales de los soldados: %hhi", 0x0a, 0
-        msjCantidadMovSoldadosDetalleAI     db "            > Hacia diagonal superior izquierda:    %li", 0x0a, 0
-        msjCantidadMovSoldadosDetalleAC     db "            > Hacia arriba:                         %li", 0x0a, 0
-        msjCantidadMovSoldadosDetalleAD     db "            > Hacia diagonal superior derecha:      %li", 0x0a, 0
-        msjCantidadMovSoldadosDetalleCI     db "            > Hacia izquierda:                      %li", 0x0a, 0
-        msjCantidadMovSoldadosDetalleCD     db "            > Hacia derecha:                        %li", 0x0a, 0
-        msjCantidadMovSoldadosDetalleBI     db "            > Hacia diagonal inferior izquierda:    %li", 0x0a, 0
-        msjCantidadMovSoldadosDetalleBC     db "            > Hacia abajo:                          %li", 0x0a, 0
-        msjCantidadMovSoldadosDetalleBD     db "            > Hacia diagonal inferior derecha:      %li", 0x0a, 0
+        msjCantidadMovOficial2             db "    ● Movimientos totales del oficial 2: %hhi", 0x0a, 0
         
-        msjCantSoldadosCapturados   db "    ● Capturas de soldados: %hhi", 0x0a, 0
+        msjCantSoldadosCapturados1   db "    ● Capturas de soldados oficial 1: %hhi", 0x0a, 0
+        msjCantSoldadosCapturados2   db "    ● Capturas de soldados oficial 2: %hhi", 0x0a, 0
         msjCantOficialesEliminados  db "    ● Oficiales eliminados: %hhi", 0x0a, 0
 
     msgPreguntaCargaArchivo db "¿Desea cargar una partida anterior? (S/N): ", 0
@@ -121,24 +114,24 @@ section .data
         f5A times 10 db ' '
         f6A times 10 db ' '
         f7A times 10 db ' '
-        movimientosOficialesArchivo   times 8 db ' '        
-        movimientosOficialesAIArchivo times 8 db ' '   
-        movimientosOficialesACArchivo times 8 db ' '      
-        movimientosOficialesADArchivo times 8 db ' '               
-        movimientosOficialesCIArchivo times 8 db ' '    
-        movimientosOficialesCDArchivo times 8 db ' '    
-        movimientosOficialesBIArchivo times 8 db ' '    
-        movimientosOficialesBCArchivo times 8 db ' ' 
-        movimientosOficialesBDArchivo times 8 db ' '
-        movimientosSoldadosArchivo    times 8 db ' '                  
-        movimientosSoldadosAIArchivo  times 8 db ' '    
-        movimientosSoldadosACArchivo  times 8 db ' '       
-        movimientosSoldadosADArchivo  times 8 db ' '              
-        movimientosSoldadosCIArchivo  times 8 db ' '   
-        movimientosSoldadosCDArchivo  times 8 db ' '    
-        movimientosSoldadosBIArchivo  times 8 db ' '    
-        movimientosSoldadosBCArchivo  times 8 db ' ' 
-        movimientosSoldadosBDArchivo  times 8 db ' '
+        movimientosOficial1Archivo   times 8 db ' '        
+        movimientosOficial1AIArchivo times 8 db ' '   
+        movimientosOficial1ACArchivo times 8 db ' '      
+        movimientosOficial1ADArchivo times 8 db ' '               
+        movimientosOficial1CIArchivo times 8 db ' '    
+        movimientosOficial1CDArchivo times 8 db ' '    
+        movimientosOficial1BIArchivo times 8 db ' '    
+        movimientosOficial1BCArchivo times 8 db ' ' 
+        movimientosOficial1BDArchivo times 8 db ' '
+        movimientosOficial2Archivo    times 8 db ' '                  
+        movimientosOficial2AIArchivo  times 8 db ' '    
+        movimientosOficial2ACArchivo  times 8 db ' '       
+        movimientosOficial2ADArchivo  times 8 db ' '              
+        movimientosOficial2CIArchivo  times 8 db ' '   
+        movimientosOficial2CDArchivo  times 8 db ' '    
+        movimientosOficial2BIArchivo  times 8 db ' '    
+        movimientosOficial2BCArchivo  times 8 db ' ' 
+        movimientosOficial2BDArchivo  times 8 db ' '
 
     ;Variables de estado ---------
     
@@ -155,8 +148,10 @@ section .data
     posOficial2 db 7, 3
     debeCapturar db 'N'
     ambosComen db 'N'
+    capturo db 'N'
     oficialesVivos db 2
     oficialEliminado db 0
+    oficialDesplazado db 0
 
 
     ;Contadores de movimientos ---
@@ -166,26 +161,26 @@ section .data
     colDestinoOriginal      db 0
     desplazamiento          db '**'
     movimientosPosibles     db 'AI','AC','AD','CI','CD','BI','BC','BD'
-      
-    movimientosOficiales   dq 0    ;   AI|AC|AD     
-    movimientosOficialesAI dq 0    ;   CI|X |CD
-    movimientosOficialesAC dq 0    ;   BI|BC|BD     
-    movimientosOficialesAD dq 0    ;            
-    movimientosOficialesCI dq 0    ;   A: Arriba      B: Bajo
-    movimientosOficialesCD dq 0    ;   C: Centro      I: Izquierda    
-    movimientosOficialesBI dq 0    ;   D: Derecha     (X punto de referencia)
-    movimientosOficialesBC dq 0 
-    movimientosOficialesBD dq 0
+    
+    movimientosOficial1  dq 0    ;   AI|AC|AD     
+    movimientosOficial1AI dq 0    ;   CI|X |CD
+    movimientosOficial1AC dq 0    ;   BI|BC|BD     
+    movimientosOficial1AD dq 0    ;            
+    movimientosOficial1CI dq 0    ;   A: Arriba      B: Bajo
+    movimientosOficial1CD dq 0    ;   C: Centro      I: Izquierda    
+    movimientosOficial1BI dq 0    ;   D: Derecha     (X punto de referencia)
+    movimientosOficial1BC dq 0 
+    movimientosOficial1BD dq 0
 
-    movimientosSoldados   dq 0                  
-    movimientosSoldadosAI dq 0    
-    movimientosSoldadosAC dq 0       
-    movimientosSoldadosAD dq 0              
-    movimientosSoldadosCI dq 0   
-    movimientosSoldadosCD dq 0    
-    movimientosSoldadosBI dq 0    
-    movimientosSoldadosBC dq 0 
-    movimientosSoldadosBD dq 0 
+    movimientosOficial2 dq 0                  
+    movimientosOficial2AI dq 0    
+    movimientosOficial2AC dq 0       
+    movimientosOficial2AD dq 0              
+    movimientosOficial2CI dq 0   
+    movimientosOficial2CD dq 0    
+    movimientosOficial2BI dq 0    
+    movimientosOficial2BC dq 0 
+    movimientosOficial2BD dq 0 
 
 
 section .bss
@@ -212,7 +207,8 @@ section .bss
     nombreArchivo resb 100
 
     totalMovimientos resw 1
-    soldadosCapturados resb 1
+    capturadosOficial1 resb 1
+    capturadosOficial2 resb 1
     oficialesEliminados resb 1
 
 ; ************ Macros ************ ;
@@ -446,11 +442,13 @@ segundaOpcion:
     mov rcx, [direccionComida2]
     mov [direccionComida], rcx
 
+
 captura:
     ; Si se llega a este punto, se come al soldado:
     mov rcx, [direccionComida]
     mov byte[rcx], ' '
     dec byte[cantidadSoldados]
+    mov byte[capturo], 'S'
     mImprimirPuts msgSoldadoCapturado
 
 movimientoNormal:
@@ -461,6 +459,13 @@ movimientoNormal:
 
     ; Actualizar posición guardada de oficiales (el chequeo de si se está moviendo un oficial se hace dentro de la función)
     call guardarPosActualOficiales
+
+    cmp byte[capturo], 'N'
+    je continuarMovimientoNormal
+    call actualizarCapturas
+    mov byte[capturo], 'N'
+    
+    continuarMovimientoNormal:
     call actualizarCantidadMovimientos
     ; Chequear si el juego terminó ->  modificar variable juegoTerminado
     call chequearJuegoTerminado
@@ -473,6 +478,9 @@ movimientoNormal:
     je  cambiarAOficiales
     mov byte[personajeMov], al
     jmp finCambio
+
+
+
 cambiarAOficiales:
     mov al, byte[cOficiales]
     mov byte[personajeMov], al
@@ -666,16 +674,12 @@ finCopiarFila:
 
 mostrarEstadisticas:
     mov word[totalMovimientos], 0
-    mov al, [movimientosOficiales]
+    mov al, [movimientosOficial1]
     add [totalMovimientos], al
-    mov al, [movimientosSoldados]
+    mov al, [movimientosOficial2]
     add [totalMovimientos], al
 
-    mov al, [cantidadSoldados]
-    sub al, 24
-    neg al
-    mov byte[soldadosCapturados], al 
-
+    
     mov al, byte[oficialesVivos]
     sub al, 2
     neg al
@@ -684,25 +688,26 @@ mostrarEstadisticas:
     mImprimirPuts msgEstadisticas
     mImprimirPrintf msjCantidadMovTotales, [totalMovimientos]
 
-    mImprimirPrintf msjCantidadMovOficiales, [movimientosOficiales]
-    mImprimirPrintf msjCantidadMovOficialesDetalleAI, qword[movimientosOficialesAI]
-    mImprimirPrintf msjCantidadMovOficialesDetalleAC, qword[movimientosOficialesAC]
-    mImprimirPrintf msjCantidadMovOficialesDetalleAD, qword[movimientosOficialesAD]
-    mImprimirPrintf msjCantidadMovOficialesDetalleCI, qword[movimientosOficialesCI]
-    mImprimirPrintf msjCantidadMovOficialesDetalleCD, qword[movimientosOficialesCD]
-    mImprimirPrintf msjCantidadMovOficialesDetalleBI, qword[movimientosOficialesBI]
-    mImprimirPrintf msjCantidadMovOficialesDetalleBC, qword[movimientosOficialesBC]
-    mImprimirPrintf msjCantidadMovOficialesDetalleBD, qword[movimientosOficialesBD]
-    mImprimirPrintf msjCantidadMovSoldados, [movimientosSoldados]
-    mImprimirPrintf msjCantidadMovSoldadosDetalleAI, qword[movimientosSoldadosAI]
-    mImprimirPrintf msjCantidadMovSoldadosDetalleAC, qword[movimientosSoldadosAC]
-    mImprimirPrintf msjCantidadMovSoldadosDetalleAD, qword[movimientosSoldadosAD]
-    mImprimirPrintf msjCantidadMovSoldadosDetalleCI, qword[movimientosSoldadosCI]
-    mImprimirPrintf msjCantidadMovSoldadosDetalleCD, qword[movimientosSoldadosCD]
-    mImprimirPrintf msjCantidadMovSoldadosDetalleBI, qword[movimientosSoldadosBI]
-    mImprimirPrintf msjCantidadMovSoldadosDetalleBC, qword[movimientosSoldadosBC]
-    mImprimirPrintf msjCantidadMovSoldadosDetalleBD, qword[movimientosSoldadosBD]
-    mImprimirPrintf msjCantSoldadosCapturados, [soldadosCapturados]
+    mImprimirPrintf msjCantidadMovOficial1, [movimientosOficial1]
+    mImprimirPrintf msjCantidadMovOficialesDetalleAI, qword[movimientosOficial1AI]
+    mImprimirPrintf msjCantidadMovOficialesDetalleAC, qword[movimientosOficial1AC]
+    mImprimirPrintf msjCantidadMovOficialesDetalleAD, qword[movimientosOficial1AD]
+    mImprimirPrintf msjCantidadMovOficialesDetalleCI, qword[movimientosOficial1CI]
+    mImprimirPrintf msjCantidadMovOficialesDetalleCD, qword[movimientosOficial1CD]
+    mImprimirPrintf msjCantidadMovOficialesDetalleBI, qword[movimientosOficial1BI]
+    mImprimirPrintf msjCantidadMovOficialesDetalleBC, qword[movimientosOficial1BC]
+    mImprimirPrintf msjCantidadMovOficialesDetalleBD, qword[movimientosOficial1BD]
+    mImprimirPrintf msjCantidadMovOficial2, [movimientosOficial2]
+    mImprimirPrintf msjCantidadMovOficialesDetalleAI, qword[movimientosOficial2AI]
+    mImprimirPrintf msjCantidadMovOficialesDetalleAC, qword[movimientosOficial2AC]
+    mImprimirPrintf msjCantidadMovOficialesDetalleAD, qword[movimientosOficial2AD]
+    mImprimirPrintf msjCantidadMovOficialesDetalleCI, qword[movimientosOficial2CI]
+    mImprimirPrintf msjCantidadMovOficialesDetalleCD, qword[movimientosOficial2CD]
+    mImprimirPrintf msjCantidadMovOficialesDetalleBI, qword[movimientosOficial2BI]
+    mImprimirPrintf msjCantidadMovOficialesDetalleBC, qword[movimientosOficial2BC]
+    mImprimirPrintf msjCantidadMovOficialesDetalleBD, qword[movimientosOficial2BD]
+    mImprimirPrintf msjCantSoldadosCapturados1, [capturadosOficial1]
+    mImprimirPrintf msjCantSoldadosCapturados2, [capturadosOficial2]
     mImprimirPrintf msjCantOficialesEliminados, [oficialesEliminados]
     mImprimirPuts saltoLinea
     ret
@@ -1239,21 +1244,6 @@ rotarCoordenadas: ; En rsi y rdi cuentan con "punteros" a las dos coordenadas qu
 retornoPersonalizacion:
     ret
 personalizacion:
-    ; elegirFichas:
-    ;     soldado:
-    ;         mImprimirPrintfModificado msgPersonalizarSoldados, 0, 0
-    ;         mLeer
-    ;         call validarEntradaFicha
-    ;         cmp byte[entradaValidaPersonalizacion], "N"
-    ;         je soldado
-    ;         mRecuperarDato 1, buffer, cSoldados
-    ;     oficial:
-    ;         mImprimirPrintfModificado msgPersonalizarOficiales, 0, 0
-    ;         mLeer
-    ;         call validarEntradaFicha
-    ;         cmp byte[entradaValidaPersonalizacion], "N"
-    ;         je oficial
-    ;         mRecuperarDato 1, buffer, cOficiales
     elegirJugador:
         mImprimirPrintfModificado msgPrimeraJugada, cSoldados, cOficiales
         mLeer
@@ -1319,24 +1309,28 @@ entradaValida:
 ;********* Funciones de estadísticas **********
 
 actualizarCantidadMovimientos:
-        call guardarDesplazamiento
         push rax
         push rdx
+        mov al, byte[cSoldados]
+        cmp  byte[personajeMov], al
+        je   finActualizarCantidadMovimientos
+
+        call guardarDesplazamiento
+        
         mov rdx, 0
-        mov al, byte[cOficiales]
-        cmp byte[personajeMov], al
-        je actualizarOficiales
-        inc byte[movimientosSoldados]
+        cmp  byte[oficialDesplazado], 1
+        je actualizarOficial1
+        inc byte[movimientosOficial2]
         add rdx, 72
-        jmp finActualizarCantidadMovimientos
-        actualizarOficiales:
-            inc byte[movimientosOficiales]
-    finActualizarCantidadMovimientos:
+        jmp finActualizarCantidadMovimientosOficiales
+        actualizarOficial1:
+            inc byte[movimientosOficial1]
+    finActualizarCantidadMovimientosOficiales:
         call actualizarContadoresMovimientosDirecciones
+    finActualizarCantidadMovimientos:
         pop rdx
         pop rax
         ret
-
 
 actualizarContadoresMovimientosDirecciones:
     push rdi
@@ -1360,7 +1354,7 @@ actualizarContadoresMovimientosDirecciones:
         jmp recorrerPosiblesDirecciones
     finActualizarContadoresMovimientosDirecciones:
         add rbx, rdx
-        inc qword[movimientosOficialesAI + rbx]
+        inc qword[movimientosOficial1AI + rbx]
         pop rbx
         pop rcx
         pop rsi
@@ -1399,6 +1393,18 @@ guardarDesplazamiento: ; Guarda en movimiento dos caracteres dependiendo de cóm
         finMoverColumna:
         ret 
 
+
+actualizarCapturas:
+    cmp  byte[oficialDesplazado], 1
+    je actualizarCapturasOficial1
+    inc byte[capturadosOficial2]
+    jmp finActualizarCapturas
+    actualizarCapturasOficial1:
+        inc byte[capturadosOficial1]
+    finActualizarCapturas:
+        ret
+
+
 ;********* Funciones auxiliares **********
 guardarPosActualOficiales:
     ; Guarda la posición actual de los oficiales
@@ -1413,17 +1419,19 @@ guardarPosActualOficiales:
     mov ah, byte[columnaActual]
     cmp byte[oficialEliminado], 1
     je guardarPosOficial2
-    mov bx, word[posOficial1]
+    mov bx, word[posOficial1] 
     cmp bx, ax
     jne guardarPosOficial2
 
     mov byte[posOficial1], dl
     mov byte[posOficial1 + 1], dh
+    mov byte[oficialDesplazado], 1
     jmp gurdarPosActualOficialesFinalizo
 
     guardarPosOficial2:
         mov byte[posOficial2], dl
         mov byte[posOficial2 + 1], dh
+        mov byte[oficialDesplazado], 2
 
     gurdarPosActualOficialesFinalizo:
         ret
@@ -1526,8 +1534,6 @@ cargarInfoArchivo:
         mRecuperarDato 1, fichaOficial, cOficiales
         mRecuperarDato 1, jugadaActual, personajeMov
         mRecuperarDato 1, rotacionesArchivo, rotaciones
-        mRecuperarDato 1, movimientosOficialesArchivo, movimientosOficiales
-        mRecuperarDato 1, movimientosSoldadosArchivo, movimientosSoldados
         mRecuperarDato 2, posOficial1A, posOficial1
         mRecuperarDato 2, posOficial2A, posOficial2
         mRecuperarDato 1, oficialesVivosA, oficialesVivos
@@ -1540,24 +1546,24 @@ cargarInfoArchivo:
         mRecuperarDato 10, f5A, f5
         mRecuperarDato 10, f6A, f6
         mRecuperarDato 10, f7A, f7
-        mRecuperarDato  8, movimientosOficialesArchivo,   movimientosOficiales 
-        mRecuperarDato  8, movimientosOficialesAIArchivo, movimientosOficialesAI
-        mRecuperarDato  8, movimientosOficialesACArchivo, movimientosOficialesAC
-        mRecuperarDato  8, movimientosOficialesADArchivo, movimientosOficialesAD
-        mRecuperarDato  8, movimientosOficialesCIArchivo, movimientosOficialesCI
-        mRecuperarDato  8, movimientosOficialesCDArchivo, movimientosOficialesCD
-        mRecuperarDato  8, movimientosOficialesBIArchivo, movimientosOficialesBI
-        mRecuperarDato  8, movimientosOficialesBCArchivo, movimientosOficialesBC
-        mRecuperarDato  8, movimientosOficialesBDArchivo, movimientosOficialesBD
-        mRecuperarDato  8, movimientosSoldadosArchivo,   movimientosSoldados 
-        mRecuperarDato  8, movimientosSoldadosAIArchivo, movimientosSoldadosAI
-        mRecuperarDato  8, movimientosSoldadosACArchivo, movimientosSoldadosAC
-        mRecuperarDato  8, movimientosSoldadosADArchivo, movimientosSoldadosAD
-        mRecuperarDato  8, movimientosSoldadosCIArchivo, movimientosSoldadosCI
-        mRecuperarDato  8, movimientosSoldadosCDArchivo, movimientosSoldadosCD
-        mRecuperarDato  8, movimientosSoldadosBIArchivo, movimientosSoldadosBI
-        mRecuperarDato  8, movimientosSoldadosBCArchivo, movimientosSoldadosBC
-        mRecuperarDato  8, movimientosSoldadosBDArchivo, movimientosSoldadosBD
+        mRecuperarDato  8, movimientosOficial1Archivo,   movimientosOficial1 
+        mRecuperarDato  8, movimientosOficial1AIArchivo, movimientosOficial1AI
+        mRecuperarDato  8, movimientosOficial1ACArchivo, movimientosOficial1AC
+        mRecuperarDato  8, movimientosOficial1ADArchivo, movimientosOficial1AD
+        mRecuperarDato  8, movimientosOficial1CIArchivo, movimientosOficial1CI
+        mRecuperarDato  8, movimientosOficial1CDArchivo, movimientosOficial1CD
+        mRecuperarDato  8, movimientosOficial1BIArchivo, movimientosOficial1BI
+        mRecuperarDato  8, movimientosOficial1BCArchivo, movimientosOficial1BC
+        mRecuperarDato  8, movimientosOficial1BDArchivo, movimientosOficial1BD
+        mRecuperarDato  8, movimientosOficial2Archivo,   movimientosOficial2 
+        mRecuperarDato  8, movimientosOficial2AIArchivo, movimientosOficial2AI
+        mRecuperarDato  8, movimientosOficial2ACArchivo, movimientosOficial2AC
+        mRecuperarDato  8, movimientosOficial2ADArchivo, movimientosOficial2AD
+        mRecuperarDato  8, movimientosOficial2CIArchivo, movimientosOficial2CI
+        mRecuperarDato  8, movimientosOficial2CDArchivo, movimientosOficial2CD
+        mRecuperarDato  8, movimientosOficial2BIArchivo, movimientosOficial2BI
+        mRecuperarDato  8, movimientosOficial2BCArchivo, movimientosOficial2BC
+        mRecuperarDato  8, movimientosOficial2BDArchivo, movimientosOficial2BD
 
         jmp leerArchivo
                                                                                                     
@@ -1577,8 +1583,6 @@ guardarProgreso:
     mRecuperarDato 1, cOficiales, fichaOficial
     mRecuperarDato 1, personajeMov, jugadaActual
     mRecuperarDato 1, rotaciones, rotacionesArchivo
-    mRecuperarDato 1, movimientosOficiales, movimientosOficialesArchivo
-    mRecuperarDato 1, movimientosSoldados, movimientosSoldadosArchivo
     mRecuperarDato 2, posOficial1, posOficial1A
     mRecuperarDato 2, posOficial2, posOficial2A
     mRecuperarDato 1, oficialesVivos, oficialesVivosA
@@ -1591,24 +1595,24 @@ guardarProgreso:
     mRecuperarDato 10, f5, f5A
     mRecuperarDato 10, f6, f6A
     mRecuperarDato 10, f7, f7A
-    mRecuperarDato  8, movimientosOficiales,   movimientosOficialesArchivo 
-    mRecuperarDato  8, movimientosOficialesAI, movimientosOficialesAIArchivo
-    mRecuperarDato  8, movimientosOficialesAC, movimientosOficialesACArchivo
-    mRecuperarDato  8, movimientosOficialesAD, movimientosOficialesADArchivo
-    mRecuperarDato  8, movimientosOficialesCI, movimientosOficialesCIArchivo
-    mRecuperarDato  8, movimientosOficialesCD, movimientosOficialesCDArchivo
-    mRecuperarDato  8, movimientosOficialesBI, movimientosOficialesBIArchivo
-    mRecuperarDato  8, movimientosOficialesBC, movimientosOficialesBCArchivo
-    mRecuperarDato  8, movimientosOficialesBD, movimientosOficialesBDArchivo
-    mRecuperarDato  8, movimientosSoldados,   movimientosSoldadosArchivo 
-    mRecuperarDato  8, movimientosSoldadosAI, movimientosSoldadosAIArchivo
-    mRecuperarDato  8, movimientosSoldadosAC, movimientosSoldadosACArchivo
-    mRecuperarDato  8, movimientosSoldadosAD, movimientosSoldadosADArchivo
-    mRecuperarDato  8, movimientosSoldadosCI, movimientosSoldadosCIArchivo
-    mRecuperarDato  8, movimientosSoldadosCD, movimientosSoldadosCDArchivo
-    mRecuperarDato  8, movimientosSoldadosBI, movimientosSoldadosBIArchivo
-    mRecuperarDato  8, movimientosSoldadosBC, movimientosSoldadosBCArchivo
-    mRecuperarDato  8, movimientosSoldadosBD, movimientosSoldadosBDArchivo
+    mRecuperarDato  8, movimientosOficial1,   movimientosOficial1Archivo 
+    mRecuperarDato  8, movimientosOficial1AI, movimientosOficial1AIArchivo
+    mRecuperarDato  8, movimientosOficial1AC, movimientosOficial1ACArchivo
+    mRecuperarDato  8, movimientosOficial1AD, movimientosOficial1ADArchivo
+    mRecuperarDato  8, movimientosOficial1CI, movimientosOficial1CIArchivo
+    mRecuperarDato  8, movimientosOficial1CD, movimientosOficial1CDArchivo
+    mRecuperarDato  8, movimientosOficial1BI, movimientosOficial1BIArchivo
+    mRecuperarDato  8, movimientosOficial1BC, movimientosOficial1BCArchivo
+    mRecuperarDato  8, movimientosOficial1BD, movimientosOficial1BDArchivo
+    mRecuperarDato  8, movimientosOficial2,   movimientosOficial2Archivo 
+    mRecuperarDato  8, movimientosOficial2AI, movimientosOficial2AIArchivo
+    mRecuperarDato  8, movimientosOficial2AC, movimientosOficial2ACArchivo
+    mRecuperarDato  8, movimientosOficial2AD, movimientosOficial2ADArchivo
+    mRecuperarDato  8, movimientosOficial2CI, movimientosOficial2CIArchivo
+    mRecuperarDato  8, movimientosOficial2CD, movimientosOficial2CDArchivo
+    mRecuperarDato  8, movimientosOficial2BI, movimientosOficial2BIArchivo
+    mRecuperarDato  8, movimientosOficial2BC, movimientosOficial2BCArchivo
+    mRecuperarDato  8, movimientosOficial2BD, movimientosOficial2BDArchivo
   
     mEscribirArchivo registroMatriz, 227, idArchivo ;Cargo en el archivo todo los necesario para reiniciar la partida
     jmp cerrarArchivo
