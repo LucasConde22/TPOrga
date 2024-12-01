@@ -30,7 +30,7 @@ section .data
     msgEstadisticas                 db 0x1B,'[32m',"-> Estadísticas del juego:", 0x1B, '[0m', 0
         msjCantidadMovTotales               db "    ● Total de movimientos de los oficiales: %hhi", 0x0a, 0
         
-        msjCantidadMovOficial1              db "    ● Movimientos totales del oficial 1: %hhi", 0x0a, 0
+        msjCantidadMovOficial1              db "    ● Movimientos efectivos totales del oficial 1: %hhi", 0x0a, 0
         msjCantidadMovOficialesDetalleAI    db "            > Hacia diagonal superior izquierda:    %li", 0x0a, 0
         msjCantidadMovOficialesDetalleAC    db "            > Hacia arriba:                         %li", 0x0a, 0
         msjCantidadMovOficialesDetalleAD    db "            > Hacia diagonal superior derecha:      %li", 0x0a, 0
@@ -40,7 +40,7 @@ section .data
         msjCantidadMovOficialesDetalleBC    db "            > Hacia abajo:                          %li", 0x0a, 0
         msjCantidadMovOficialesDetalleBD    db "            > Hacia diagonal inferior derecha:      %li", 0x0a, 0
         
-        msjCantidadMovOficial2              db "    ● Movimientos totales del oficial 2: %hhi", 0x0a, 0
+        msjCantidadMovOficial2              db "    ● Movimientos efectivos totales del oficial 2: %hhi", 0x0a, 0
         
         msjCantSoldadosCapturados1          db "    ● Capturas de soldados oficial 1: %hhi", 0x0a, 0
         msjCantSoldadosCapturados2          db "    ● Capturas de soldados oficial 2: %hhi", 0x0a, 0
@@ -564,8 +564,8 @@ fin:
     syscall ; Salir del programa
 
 omitioCaptura:
-    call actualizarCantidadMovimientos
-    mImprimirPuts msgPerdioOficial
+    add word[totalMovimientos], 1 ;Sumamos uno para que se registre la cantidad de movimientos que tuvieron los oficiales, 
+    mImprimirPuts msgPerdioOficial ; pero no actualizamos sus movimientos en cada direccion ya que al omitir una captura, el movimiento no fue exitoso y no se realizó
     mov rcx, [direccionOficial]
     mov byte[rcx], ' ' ; Se quita al oficial
     mov r13b, byte[potencialEliminado]
@@ -715,7 +715,6 @@ copiarFila:
 
 
 mostrarEstadisticas:
-    mov word[totalMovimientos], 0
     mov al, [movimientosOficial1]
     add [totalMovimientos], al
     mov al, [movimientosOficial2]
