@@ -76,23 +76,23 @@ section .data
     ; ****** Tablero interno ********
 
     columnas    db " | 1234567", 0
-    f1          db "1|   XXX  ", 0x0A
-    f2          db "2|   XXX  ", 0x0A
-    f3          db "3| XXXXXXX", 0x0A
-    f4          db "4| XXXXXXX", 0
-    f5          db "5| XX   XX", 0
-    f6          db "6|     O  ", 0
-    f7          db "7|   O    ", 0
+    f1          db "1|    X   ", 0x0A
+    f2          db "2|     X  ", 0x0A
+    f3          db "3| X    XX", 0x0A
+    f4          db "4| XXX X X", 0
+    f5          db "5|  X XXXX", 0
+    f6          db "6|   XXO  ", 0
+    f7          db "7|   OXX  ", 0
 
     ; ****** Tablero a imprimirse ********
     columnasImp db " | 1234567", 0    ; Casillas válidas:
-    f1Imp       db "1|   XXX  ", 0x0A ;                   13 14 15
-    f2Imp       db "2|   XXX  ", 0x0A ;                   23 24 25
-    f3Imp       db "3| XXXXXXX", 0x0A ;             31 32 33 34 35 36 37
-    f4Imp       db "4| XXXXXXX", 0    ;             41 42 43 44 45 46 47
-    f5Imp       db "5| XX   XX", 0    ;             51 52 53 54 55 56 57
-    f6Imp       db "6|     O  ", 0    ;                  63 64 65
-    f7Imp       db "7|   O    ", 0    ;                  73 74 75
+    f1Imp       db "1|    X   ", 0x0A ;                   13 14 15
+    f2Imp       db "2|     X  ", 0x0A ;                   23 24 25
+    f3Imp       db "3| X    XX", 0x0A ;             31 32 33 34 35 36 37
+    f4Imp       db "4| XXX X X", 0    ;             41 42 43 44 45 46 47
+    f5Imp       db "5|  X XXXX", 0    ;             51 52 53 54 55 56 57
+    f6Imp       db "6|   XXO  ", 0    ;                  63 64 65
+    f7Imp       db "7|   OXX  ", 0    ;                  73 74 75
 
 
 
@@ -947,6 +947,9 @@ chequearAdyacente:
 
 
 chequearSiguienteExterior:
+    cmp rax, 2
+    je oficialEstaEncerrado
+
     push rdx
     push word[buffer]
     
